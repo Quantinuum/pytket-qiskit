@@ -518,6 +518,8 @@ class IBMQBackend(Backend):
         :param timeout: Only valid for optimisation level 3, gives a maximum time
             for running a single thread of the pass :py:meth:`~pytket.passes.GreedyPauliSimp`. Increase for
             optimising larger circuits.
+        :param allow_symbolic: replaces the lightsabre routing with the tket routing to allow symbolic
+            parameters in the circuit
 
         :return: An optimised quantum circuit
         """
@@ -565,6 +567,8 @@ class IBMQBackend(Backend):
         :param timeout: Only valid for optimisation level 3, gives a maximum time
             for running a single thread of the pass :py:meth:`~pytket.passes.GreedyPauliSimp`. Increase for
             optimising larger circuits.
+        :param allow_symbolic: replaces the lightsabre routing with the tket routing to allow symbolic
+            parameters in the circuit
         :return: Compiled circuits.
         """
         return [

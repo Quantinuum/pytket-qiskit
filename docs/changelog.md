@@ -4,9 +4,10 @@
 
 # Changelog
 
-## 0.74.0rc0 (November 2025)
+## 0.74.0 (November 2025)
 
 - Update minimum pytket version to 2.11
+- Add `allow_symbolic` parameter to get_compiled_circuit function
 
 ## 0.73.0 (October 2025)
 
