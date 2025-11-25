@@ -351,7 +351,9 @@ class _AerBaseBackend(Backend):
                 "Barrier operations in this circuit will be removed when using "
                 "optimisation level 3."
             )
-        self.default_compilation_pass(optimisation_level, timeout, allow_symbolic=allow_symbolic).apply(return_circuit)
+        self.default_compilation_pass(
+            optimisation_level, timeout, allow_symbolic=allow_symbolic
+        ).apply(return_circuit)
         return return_circuit
 
     def get_compiled_circuits(
@@ -390,7 +392,10 @@ class _AerBaseBackend(Backend):
         :return: Compiled circuits.
         """
         return [
-            self.get_compiled_circuit(c, optimisation_level, timeout, allow_symbolic=allow_symbolic) for c in circuits
+            self.get_compiled_circuit(
+                c, optimisation_level, timeout, allow_symbolic=allow_symbolic
+            )
+            for c in circuits
         ]
 
     def process_circuits(  # noqa: PLR0912
