@@ -4,6 +4,10 @@
 
 # Changelog
 
+## 0.74.0rc0 (November 2025)
+
+- Update minimum pytket version to 2.11
+
 ## 0.73.0 (October 2025)
 
 - Fix an issue related to the handling of `IfElseOp` conditions in {py:func}`~.qiskit_to_tk`. [#514](https://github.com/CQCL/pytket-qiskit/issues/514).

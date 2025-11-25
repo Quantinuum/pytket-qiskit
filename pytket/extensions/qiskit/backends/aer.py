@@ -327,7 +327,11 @@ class _AerBaseBackend(Backend):
         )
 
     def get_compiled_circuit(
-        self, circuit: Circuit, optimisation_level: int = 2, timeout: int = 300
+        self,
+        circuit: Circuit,
+        optimisation_level: int = 2,
+        timeout: int = 300,
+        allow_symbolic: bool = False,
     ) -> Circuit:
         """
         Return a single circuit compiled with :py:meth:`default_compilation_pass`.
@@ -347,7 +351,7 @@ class _AerBaseBackend(Backend):
                 "Barrier operations in this circuit will be removed when using "
                 "optimisation level 3."
             )
-        self.default_compilation_pass(optimisation_level, timeout).apply(return_circuit)
+        self.default_compilation_pass(optimisation_level, timeout, allow_symbolic=allow_symbolic).apply(return_circuit)
         return return_circuit
 
     def get_compiled_circuits(
@@ -355,6 +359,7 @@ class _AerBaseBackend(Backend):
         circuits: Sequence[Circuit],
         optimisation_level: int = 2,
         timeout: int = 300,
+        allow_symbolic: bool = False,
     ) -> list[Circuit]:
         """Compile a sequence of circuits with :py:meth:`default_compilation_pass`
         and return the list of compiled circuits (does not act in place).
@@ -385,7 +390,7 @@ class _AerBaseBackend(Backend):
         :return: Compiled circuits.
         """
         return [
-            self.get_compiled_circuit(c, optimisation_level, timeout) for c in circuits
+            self.get_compiled_circuit(c, optimisation_level, timeout, allow_symbolic=allow_symbolic) for c in circuits
         ]
 
     def process_circuits(  # noqa: PLR0912
