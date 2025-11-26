@@ -4,6 +4,11 @@
 
 # Changelog
 
+## 0.74.0 (November 2025)
+
+- Update minimum pytket version to 2.11
+- Add `allow_symbolic` parameter to get_compiled_circuit function
+
 ## 0.73.0 (October 2025)
 
 - Fix an issue related to the handling of `IfElseOp` conditions in {py:func}`~.qiskit_to_tk`. [#514](https://github.com/CQCL/pytket-qiskit/issues/514).
