@@ -1,5 +1,1 @@
-pytest
-pytest-timeout
-pytest-rerunfailures
-hypothesis
-requests_mock
+TODO DELETE THIS FILE
