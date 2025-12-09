@@ -603,7 +603,7 @@ def _build_rename_map(
 # Used for handling of IfElseOp
 # docs -> https://docs.quantum.ibm.com/api/qiskit/qiskit.circuit.IfElseOp
 # Examples -> https://docs.quantum.ibm.com/guides/classical-feedforward-and-control-flow
-# pytket-qiskit issue -> https://github.com/CQCL/pytket-qiskit/issues/415
+# pytket-qiskit issue -> https://github.com/Quantinuum/pytket-qiskit/issues/415
 def _pytket_circuits_from_ifelseop(
     if_else_op: IfElseOp,
     outer_builder: _CircuitBuilder,
@@ -962,7 +962,7 @@ def append_tk_command_to_qiskit(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915
     if optype == OpType.Conditional:
         assert isinstance(op, Conditional)
         if op.op.type == OpType.Conditional:
-            # See https://github.com/CQCL/pytket-qiskit/issues/442
+            # See https://github.com/Quantinuum/pytket-qiskit/issues/442
             raise NotImplementedError("Nested conditional not supported")
         if op.op.type == OpType.Phase:
             # conditional phase not supported

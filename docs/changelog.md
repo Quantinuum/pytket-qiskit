@@ -11,7 +11,7 @@
 
 ## 0.73.0 (October 2025)
 
-- Fix an issue related to the handling of `IfElseOp` conditions in {py:func}`~.qiskit_to_tk`. [#514](https://github.com/CQCL/pytket-qiskit/issues/514).
+- Fix an issue related to the handling of `IfElseOp` conditions in {py:func}`~.qiskit_to_tk`. [#514](https://github.com/Quantinuum/pytket-qiskit/issues/514).
 - Add static method `IBMQBackend.pass_from_info` that takes a `BackendInfo` (and optimisation_level and timeout) and produces a base pass without requiring the network or authentication.
 - Update minimum qiskit version to 2.2.3.
 - Remove support for conversion of circuits containing symbolic parameters
@@ -230,7 +230,7 @@ with register conditions. Only conditions on an entire register are supported.
 - Introduce dependency on qiskit-algorithms.
 - Seed given to {py:meth}`~.AerBackend.process_circuits` will be automatically incremented
   for the different circuit batches submitted.
-- Fix {py:class}`RuntimeError` caused by the use of custom gates in {py:func}`~.qiskit_to_tk` [#200](https://github.com/CQCL/pytket-qiskit/issues/200).
+- Fix {py:class}`RuntimeError` caused by the use of custom gates in {py:func}`~.qiskit_to_tk` [#200](https://github.com/Quantinuum/pytket-qiskit/issues/200).
 
 ## 0.45.0 (October 2023)
 

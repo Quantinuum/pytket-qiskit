@@ -133,7 +133,7 @@ def test_qiskit_counts(brussels_emulator_backend: IBMQEmulatorBackend) -> None:
 
 
 def test_architectures() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/14
+    # https://github.com/Quantinuum/pytket-qiskit/issues/14
     arch_list = [None, Architecture([(0, 1), (1, 2)]), FullyConnected(3)]
     qc = circuit_gen(True)
     for arch in arch_list:

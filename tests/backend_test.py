@@ -130,7 +130,7 @@ def test_statevector() -> None:
 
 
 def test_statevector_sim_with_permutation() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/35
+    # https://github.com/Quantinuum/pytket-qiskit/issues/35
     b = AerStateBackend()
     c = Circuit(3).X(0).SWAP(0, 1).SWAP(0, 2)
     qubits = c.qubits
@@ -635,7 +635,7 @@ def test_ilo() -> None:
 
 
 def test_ubox() -> None:
-    # https://github.com/CQCL/pytket-extensions/issues/342
+    # https://github.com/Quantinuum/pytket-extensions/issues/342
     u = np.array(
         [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=complex
     )
@@ -988,7 +988,7 @@ def test_ibmq_mid_measure(brussels_backend: IBMQBackend) -> None:
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
 def test_ibmq_conditional(brussels_backend: IBMQBackend) -> None:
     # It seems that conditional operations are no longer supported as of July 2025. See:
-    # https://github.com/CQCL/pytket-qiskit/issues/505
+    # https://github.com/Quantinuum/pytket-qiskit/issues/505
     c = Circuit(3, 2).H(1).CX(1, 2).Measure(0, 0).Measure(1, 1)
     c.add_barrier([0, 1, 2])
     ar = c.add_c_register("a", 1)
@@ -1139,7 +1139,7 @@ def test_available_devices(qiskit_runtime_service: QiskitRuntimeService) -> None
 def test_backendinfo_serialization1(
     brussels_emulator_backend: IBMQEmulatorBackend,
 ) -> None:
-    # https://github.com/CQCL/tket/issues/192
+    # https://github.com/Quantinuum/tket/issues/192
     backend_info_json = brussels_emulator_backend.backend_info.to_dict()
     s = json.dumps(backend_info_json)
     backend_info_json1 = json.loads(s)
@@ -1147,7 +1147,7 @@ def test_backendinfo_serialization1(
 
 
 def test_backendinfo_serialization2() -> None:
-    # https://github.com/CQCL/tket/issues/192
+    # https://github.com/Quantinuum/tket/issues/192
     my_noise_model = NoiseModel()
     my_noise_model.add_readout_error(
         [
@@ -1179,7 +1179,7 @@ def test_backendinfo_serialization2() -> None:
 
 
 def test_sim_qubit_order() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/54
+    # https://github.com/Quantinuum/pytket-qiskit/issues/54
     backend = AerStateBackend()
     circ = Circuit()
     circ.add_q_register("a", 1)
@@ -1194,7 +1194,7 @@ def test_sim_qubit_order() -> None:
 def test_required_predicates(
     brussels_emulator_backend: IBMQEmulatorBackend,
 ) -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/93
+    # https://github.com/Quantinuum/pytket-qiskit/issues/93
     circ = Circuit(8)  # 8 qubit circuit in IBMQ gateset
     circ.X(0).CX(0, 1).CX(0, 2).CX(0, 3).CX(0, 4).CX(0, 5).CX(0, 6).CX(
         0, 7
@@ -1338,7 +1338,7 @@ def _get_qiskit_statevector(qc: QuantumCircuit) -> np.ndarray:
 
 
 # The three tests below and helper function above relate to this issue.
-# https://github.com/CQCL/pytket-qiskit/issues/99
+# https://github.com/Quantinuum/pytket-qiskit/issues/99
 def test_statevector_simulator_gateset_deterministic() -> None:
     sv_backend = AerStateBackend()
     sv_supported_gates = sv_backend.backend_info.gate_set
@@ -1378,7 +1378,7 @@ def test_statevector_non_deterministic() -> None:
 
 
 def test_unitary_backend_transpiles() -> None:
-    """regression test for https://github.com/CQCL/pytket-qiskit/issues/142"""
+    """regression test for https://github.com/Quantinuum/pytket-qiskit/issues/142"""
     backend = AerUnitaryBackend()
     n_ancillas = 5  # using n_ancillas <=4 doees not raise an error
     n_spins = 1
@@ -1401,7 +1401,7 @@ def test_unitary_backend_transpiles() -> None:
 
 def test_barriers_in_aer_simulators() -> None:
     """Test for barrier support in aer simulators
-    https://github.com/CQCL/pytket-qiskit/issues/186"""
+    https://github.com/Quantinuum/pytket-qiskit/issues/186"""
 
     circ = Circuit(2).H(0).CX(0, 1).add_barrier([0, 1])
 
@@ -1439,7 +1439,7 @@ def test_ibmq_local_emulator(
     assert sum(c0 != c1 for c0, c1 in counts) < 25
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/231
+# https://github.com/Quantinuum/pytket-qiskit/issues/231
 def test_noiseless_density_matrix_simulation() -> None:
     density_matrix_backend = AerDensityMatrixBackend()
     assert density_matrix_backend.supports_density_matrix is True
@@ -1478,7 +1478,7 @@ def test_noiseless_density_matrix_simulation() -> None:
     assert np.isclose(np.trace(noiseless_dm2**2).real, 1)
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/231
+# https://github.com/Quantinuum/pytket-qiskit/issues/231
 def test_noisy_density_matrix_simulation() -> None:
     # Test that __init__ works with a very simple noise model
     noise_model = NoiseModel()
@@ -1506,7 +1506,7 @@ def test_noisy_density_matrix_simulation() -> None:
 
 def test_mc_gate_on_aer() -> None:
     """Test for cm gates support in aer simulators
-    https://github.com/CQCL/pytket-qiskit/issues/368"""
+    https://github.com/Quantinuum/pytket-qiskit/issues/368"""
     b = AerBackend()
     c = Circuit(3, 3)
     c.X(0).X(1)
@@ -1576,7 +1576,7 @@ def test_optimisation_level_3_serialisation() -> None:
 
 
 def test_process_circuits_n_qubits() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/420
+    # https://github.com/Quantinuum/pytket-qiskit/issues/420
     circs = [Circuit(1).X(0).measure_all(), Circuit(2).X(0).measure_all()]
     b = AerBackend()
     hs = b.process_circuits(circs, n_shots=10)
@@ -1608,7 +1608,7 @@ def test_noise_model_relabelling() -> None:
 
 
 def test_swap_unitary_compilation() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/485
+    # https://github.com/Quantinuum/pytket-qiskit/issues/485
     c = Circuit(2)
     c.SWAP(0, 1)
     b = AerUnitaryBackend()

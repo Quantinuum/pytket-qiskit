@@ -84,7 +84,7 @@ from qiskit.primitives import (  # type: ignore
 )
 
 # RuntimeJobV2 has no queue_position attribute, which is referenced
-# via job_monitor see-> https://github.com/CQCL/pytket-qiskit/issues/48
+# via job_monitor see-> https://github.com/Quantinuum/pytket-qiskit/issues/48
 # therefore we can't use job_monitor until fixed
 # from qiskit.tools.monitor import job_monitor  # type: ignore
 from .._metadata import __extension_version__
@@ -730,7 +730,7 @@ class IBMQBackend(Backend):
                     warn(f"Unable to retrieve job {jobid}: {e}")  # noqa: B028
                     raise CircuitNotRunError(handle)  # noqa: B904
                 # RuntimeJobV2 has no queue_position attribute, which is referenced
-                # via job_monitor see-> https://github.com/CQCL/pytket-qiskit/issues/48
+                # via job_monitor see-> https://github.com/Quantinuum/pytket-qiskit/issues/48
                 # therefore we can't use job_monitor until fixed
                 if self._monitor and job:
                     #     job_monitor(job)

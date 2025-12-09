@@ -445,7 +445,7 @@ def test_cnx() -> None:
 
 
 def test_convert_cnz_to_qiskit() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/460
+    # https://github.com/Quantinuum/pytket-qiskit/issues/460
     circ = Circuit(1).add_gate(OpType.CnZ, [0])
     qc = tk_to_qiskit(circ)
     assert qc[0].name == "z"
@@ -708,7 +708,7 @@ def test_cnry_conversion() -> None:
     )
 
 
-# https://github.com/CQCL/pytket-extensions/issues/275
+# https://github.com/Quantinuum/pytket-extensions/issues/275
 def test_convert_multi_c_reg() -> None:
     c = Circuit()
     q0, q1 = c.add_q_register("q", 2)
@@ -848,7 +848,7 @@ def test_tk_to_qiskit_redundancies() -> None:
 
 
 def test_ccx_conversion() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/117
+    # https://github.com/Quantinuum/pytket-qiskit/issues/117
     c00 = QuantumCircuit(3)
     c00.ccx(0, 1, 2, 0)  # 0 = "00" (little-endian)
     assert compare_unitaries(
@@ -906,7 +906,7 @@ def test_conditional_conversion_2() -> None:
     assert c_tket == expected_circ
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/100
+# https://github.com/Quantinuum/pytket-qiskit/issues/100
 def test_state_prep_conversion_array_or_list() -> None:
     # State prep with list of real amplitudes
     ghz_state_permuted = np.array([0, 0, 1 / np.sqrt(2), 0, 0, 0, 0, 1 / np.sqrt(2)])
@@ -998,7 +998,7 @@ def test_conversion_to_tket_with_and_without_resets() -> None:
 
 
 def test_unitary_gate() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/122
+    # https://github.com/Quantinuum/pytket-qiskit/issues/122
     qkc = QuantumCircuit(3)
     for n in range(4):
         u = np.eye(1 << n, dtype=complex)
@@ -1064,7 +1064,7 @@ def test_failed_conversion_error() -> None:
         qiskit_to_tk(qc)
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/200
+# https://github.com/Quantinuum/pytket-qiskit/issues/200
 def test_real_amplitudes_numeric_params() -> None:
     qc = QuantumCircuit(3)
     params = [np.pi / 2] * 9
@@ -1086,7 +1086,7 @@ def test_real_amplitudes_numeric_params() -> None:
     assert compare_unitaries(unitary1, unitary2)
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/256
+# https://github.com/Quantinuum/pytket-qiskit/issues/256
 @pytest.mark.xfail(reason="Limited support for symbolic conversions")
 def test_symbolic_param_conv() -> None:
     qc = n_local(2, "ry", "cz", reps=1, entanglement="linear")
@@ -1121,7 +1121,7 @@ def test_implicit_swap_warning() -> None:
         shots_backend.run_circuit(c)
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/337
+# https://github.com/Quantinuum/pytket-qiskit/issues/337
 def test_nonregister_bits() -> None:
     c = Circuit(1).X(0).measure_all()
     c.rename_units({Bit(0): Bit(1)})
@@ -1129,7 +1129,7 @@ def test_nonregister_bits() -> None:
         tk_to_qiskit(c)
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/415
+# https://github.com/Quantinuum/pytket-qiskit/issues/415
 def test_ifelseop_two_branches() -> None:
     qreg = QuantumRegister(1, "r")
     creg = ClassicalRegister(1, "s")
@@ -1177,7 +1177,7 @@ def test_ifelseop_two_branches() -> None:
     assert expected_circ == tkc
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/415
+# https://github.com/Quantinuum/pytket-qiskit/issues/415
 def test_ifelseop_one_branch() -> None:
     qubits = QuantumRegister(1, "q1")
     clbits = ClassicalRegister(1, "c1")
@@ -1215,7 +1215,7 @@ def test_ifelseop_one_branch() -> None:
     assert tket_circ_if_else == expected_circ
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/452
+# https://github.com/Quantinuum/pytket-qiskit/issues/452
 def test_ifelseop_reg_cond_if() -> None:
     qreg = QuantumRegister(3, "q")
     creg = ClassicalRegister(3, "c")
@@ -1268,7 +1268,7 @@ def test_ifelseop_reg_cond_if() -> None:
     assert expected_circ == tkc
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/452
+# https://github.com/Quantinuum/pytket-qiskit/issues/452
 def test_ifelseop_reg_cond_if_else() -> None:
     qreg = QuantumRegister(2, "q")
     creg = ClassicalRegister(2, "c")
@@ -1324,7 +1324,7 @@ def test_ifelseop_reg_cond_if_else() -> None:
 
 
 def test_range_preds_with_conditionals() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/375
+    # https://github.com/Quantinuum/pytket-qiskit/issues/375
     c = Circuit(1, 1)
     treg = c.add_c_register(_TEMP_BIT_NAME, 1)
     c.add_c_range_predicate(1, 1, [Bit(0)], treg[0])
@@ -1337,7 +1337,7 @@ def test_range_preds_with_conditionals() -> None:
 
 
 def test_nested_conditionals() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/442
+    # https://github.com/Quantinuum/pytket-qiskit/issues/442
     c0 = Circuit(1, 1).X(0, condition_bits=[0], condition_value=1)
     cbox = CircBox(c0)
     c = Circuit(1, 2)
@@ -1394,7 +1394,7 @@ def test_qiskitv2_conversions() -> None:
     assert if_tk1.condition == (ClassicalRegister(2, "c"), 2)
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/514
+# https://github.com/Quantinuum/pytket-qiskit/issues/514
 def test_bit_ref_circuit() -> None:
     qreg = QuantumRegister(1)
     qreg_setter = QuantumRegister(2)
