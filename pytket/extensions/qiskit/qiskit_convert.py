@@ -54,7 +54,7 @@ from pytket.utils import (
     gen_term_sequence_circuit,
     permute_rows_cols_in_unitary,
 )
-from qiskit_ibm_runtime.circuit import MidCircuitMeasure
+from qiskit_ibm_runtime.circuit import MidCircuitMeasure  # type: ignore
 from qiskit_ibm_runtime.models.backend_configuration import (  # type: ignore
     QasmBackendConfiguration,
 )
