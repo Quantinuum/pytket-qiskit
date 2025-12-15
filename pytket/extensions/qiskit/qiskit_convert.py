@@ -54,6 +54,7 @@ from pytket.utils import (
     gen_term_sequence_circuit,
     permute_rows_cols_in_unitary,
 )
+from qiskit_ibm_runtime.circuit import MidCircuitMeasure
 from qiskit_ibm_runtime.models.backend_configuration import (  # type: ignore
     QasmBackendConfiguration,
 )
@@ -163,6 +164,7 @@ _qiskit_gates_other = {
     Instruction: OpType.CircBox,
     Gate: OpType.CircBox,
     Measure: OpType.Measure,
+    MidCircuitMeasure: OpType.Measure,
     Reset: OpType.Reset,
     Initialize: OpType.StatePreparationBox,
     StatePreparation: OpType.StatePreparationBox,

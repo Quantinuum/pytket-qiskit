@@ -50,7 +50,7 @@ def setup_qiskit_account() -> None:
 @pytest.fixture(scope="module")
 def brussels_backend() -> IBMQBackend:
     return IBMQBackend(
-        "ibm_brussels",
+        "ibm_aachen",
         instance=os.getenv("PYTKET_REMOTE_IBM_CLOUD_INSTANCE"),
         token=os.getenv("PYTKET_REMOTE_IBM_CLOUD_TOKEN"),
     )
@@ -59,7 +59,7 @@ def brussels_backend() -> IBMQBackend:
 @pytest.fixture(scope="module")
 def brussels_emulator_backend() -> IBMQEmulatorBackend:
     return IBMQEmulatorBackend(
-        "ibm_brussels",
+        "ibm_aachen",
         instance=os.getenv("PYTKET_REMOTE_IBM_CLOUD_INSTANCE"),
         token=os.getenv("PYTKET_REMOTE_IBM_CLOUD_TOKEN"),
     )
@@ -80,9 +80,9 @@ def qiskit_runtime_service() -> QiskitRuntimeService:
 
 
 @pytest.fixture(scope="module")
-def ibm_brussels_backend() -> IBMQBackend:
+def ibm_aachen_backend() -> IBMQBackend:
     return IBMQBackend(
-        backend_name="ibm_brussels",
+        backend_name="ibm_aachen",
         monitor=False,
         instance=os.getenv("PYTKET_REMOTE_IBM_CLOUD_INSTANCE"),
         token=os.getenv("PYTKET_REMOTE_IBM_CLOUD_TOKEN"),

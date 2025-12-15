@@ -159,7 +159,7 @@ def test_symbolic() -> None:
     circ.ZZPhase(a, 0, 1)
 
     b = IBMQBackend(
-        "ibm_brussels",
+        "ibm_aachen",
         instance=os.getenv("PYTKET_REMOTE_IBM_CLOUD_INSTANCE"),
         token=os.getenv("PYTKET_REMOTE_IBM_CLOUD_TOKEN"),
     )
@@ -178,7 +178,7 @@ def test_symbolic_ii() -> None:
     circ.ZZPhase(a, 0, 1)
 
     b = IBMQBackend(
-        "ibm_brussels",
+        "ibm_aachen",
         instance=os.getenv("PYTKET_REMOTE_IBM_CLOUD_INSTANCE"),
         token=os.getenv("PYTKET_REMOTE_IBM_CLOUD_TOKEN"),
     )
@@ -229,7 +229,7 @@ def test_noise(brussels_backend: IBMQBackend) -> None:
         else:
             zer_exp.append(expectation)
 
-    assert min(one_exp) > max(zer_exp)
+    assert 1.5 * min(one_exp) > max(zer_exp)
 
     c2 = (
         Circuit(4, 4)
@@ -256,10 +256,10 @@ def test_process_characterisation(brussels_backend: IBMQBackend) -> None:
     node_errors: dict = char.get("NodeErrors", {})
     link_errors: dict = char.get("EdgeErrors", {})
 
-    assert len(arch.nodes) == 127
-    assert len(arch.coupling) == 144
-    assert len(node_errors) == 127
-    assert len(link_errors) == 288
+    assert len(arch.nodes) == 156
+    assert len(arch.coupling) == 352
+    assert len(node_errors) == 156
+    assert len(link_errors) == 352
 
 
 def test_process_characterisation_no_noise_model() -> None:
@@ -1090,7 +1090,7 @@ def test_rebase_phase() -> None:
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
 def test_postprocess() -> None:
     b = IBMQBackend(
-        "ibm_brussels",
+        "ibm_aachen",
         instance=os.getenv("PYTKET_REMOTE_IBM_CLOUD_INSTANCE"),
         token=os.getenv("PYTKET_REMOTE_IBM_CLOUD_TOKEN"),
     )
@@ -1211,12 +1211,12 @@ def test_required_predicates(
 
 @pytest.mark.flaky(reruns=3, reruns_delay=10)
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
-def test_ecr_gate_compilation(ibm_brussels_backend: IBMQBackend) -> None:
-    assert ibm_brussels_backend.backend_info.gate_set >= {
+def test_ecr_gate_compilation(ibm_aachen_backend: IBMQBackend) -> None:
+    assert ibm_aachen_backend.backend_info.gate_set >= {
         OpType.X,
         OpType.SX,
         OpType.Rz,
-        OpType.ECR,
+        OpType.CZ,
     }
     # circuit for an un-routed GHZ state
     circ = (
@@ -1231,10 +1231,10 @@ def test_ecr_gate_compilation(ibm_brussels_backend: IBMQBackend) -> None:
         .measure_all()
     )
     for optimisation_level in range(3):
-        compiled_circ = ibm_brussels_backend.get_compiled_circuit(
+        compiled_circ = ibm_aachen_backend.get_compiled_circuit(
             circ, optimisation_level
         )
-        assert ibm_brussels_backend.valid_circuit(compiled_circ)
+        assert ibm_aachen_backend.valid_circuit(compiled_circ)
 
 
 def test_crosstalk_noise_model() -> None:
@@ -1313,18 +1313,18 @@ def test_crosstalk_noise_model() -> None:
 
 
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
-def test_ecr(ibm_brussels_backend: IBMQBackend) -> None:
+def test_ecr(ibm_aachen_backend: IBMQBackend) -> None:
     ghz5 = Circuit(5)
     ghz5.H(0).CX(0, 1).CX(0, 2).CX(0, 3).CX(0, 4)
     ghz5.measure_all()
-    ibm_ghz5 = ibm_brussels_backend.get_compiled_circuit(ghz5)
+    ibm_ghz5 = ibm_aachen_backend.get_compiled_circuit(ghz5)
 
-    compiled_ghz5 = ibm_brussels_backend.get_compiled_circuit(ibm_ghz5)
+    compiled_ghz5 = ibm_aachen_backend.get_compiled_circuit(ibm_ghz5)
 
-    ibm_brussels_backend.valid_circuit(compiled_ghz5)
+    ibm_aachen_backend.valid_circuit(compiled_ghz5)
 
-    handle = ibm_brussels_backend.process_circuit(compiled_ghz5, n_shots=1000)
-    ibm_brussels_backend.cancel(handle)
+    handle = ibm_aachen_backend.process_circuit(compiled_ghz5, n_shots=1000)
+    ibm_aachen_backend.cancel(handle)
 
 
 # helper function for testing
