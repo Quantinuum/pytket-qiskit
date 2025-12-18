@@ -4,6 +4,11 @@
 
 # Changelog
 
+## 0.75.0 (December 2025)
+
+- Update minimum qiskit-ibm-runtime version requirement to 0.43.1.
+- Fix issue with new gates in the error model
+
 ## 0.74.0 (November 2025)
 
 - Update minimum pytket version to 2.11
