@@ -63,6 +63,16 @@ from pytket.utils import (
     gen_term_sequence_circuit,
     permute_rows_cols_in_unitary,
 )
+from qiskit_ibm_runtime.circuit import MidCircuitMeasure  # type: ignore
+from qiskit_ibm_runtime.models.backend_configuration import (  # type: ignore
+    QasmBackendConfiguration,
+)
+from qiskit_ibm_runtime.models.backend_properties import (  # type: ignore
+    BackendProperties,
+)
+from symengine import sympify  # type: ignore
+
+import qiskit.circuit.library.standard_gates as qiskit_gates  # type: ignore
 from qiskit import (
     ClassicalRegister,
     QuantumCircuit,
@@ -163,6 +173,7 @@ _qiskit_gates_other = {
     Instruction: OpType.CircBox,
     Gate: OpType.CircBox,
     Measure: OpType.Measure,
+    MidCircuitMeasure: OpType.Measure,
     Reset: OpType.Reset,
     Initialize: OpType.StatePreparationBox,
     StatePreparation: OpType.StatePreparationBox,
@@ -192,6 +203,9 @@ _known_gate_rev_phase[OpType.Vdg] = (qiskit_gates.SXdgGate, 0.25)
 
 # use minor signature hacks to figure out the string names of qiskit Gate objects
 _gate_str_2_optype: dict[str, OpType] = dict()  # noqa: C408
+_gate_str_2_optype["reset_2"] = OpType.Reset
+_gate_str_2_optype["reset_3"] = OpType.Reset
+
 for gate, optype in _known_qiskit_gate.items():
     if gate in (
         UnitaryGate,
