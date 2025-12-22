@@ -28,6 +28,7 @@ from uuid import UUID
 import numpy as np
 import sympy
 from numpy.typing import NDArray
+from qiskit_ibm_runtime.circuit import MidCircuitMeasure  # type: ignore
 from qiskit_ibm_runtime.models.backend_configuration import (  # type: ignore
     QasmBackendConfiguration,
 )
@@ -63,16 +64,6 @@ from pytket.utils import (
     gen_term_sequence_circuit,
     permute_rows_cols_in_unitary,
 )
-from qiskit_ibm_runtime.circuit import MidCircuitMeasure  # type: ignore
-from qiskit_ibm_runtime.models.backend_configuration import (  # type: ignore
-    QasmBackendConfiguration,
-)
-from qiskit_ibm_runtime.models.backend_properties import (  # type: ignore
-    BackendProperties,
-)
-from symengine import sympify  # type: ignore
-
-import qiskit.circuit.library.standard_gates as qiskit_gates  # type: ignore
 from qiskit import (
     ClassicalRegister,
     QuantumCircuit,
