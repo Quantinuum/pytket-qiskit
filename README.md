@@ -7,7 +7,7 @@
 with tket, a quantum computing toolkit and optimising compiler developed by Quantinuum.
 
 `pytket-qiskit` is an extension to `pytket` that allows `pytket` circuits to be
-executed on .
+executed on IBM Quantum backends and simulators via Qiskit, and provides conversion utilities between `pytket` and Qiskit circuit representations.
 
 Some useful links:
 
