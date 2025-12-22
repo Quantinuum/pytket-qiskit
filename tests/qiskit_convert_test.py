@@ -19,36 +19,6 @@ from math import pi
 import numpy as np
 import pytest
 import qiskit.circuit.library.standard_gates as qiskit_gates  # type: ignore
-from pytket.circuit import (
-    Bit,
-    CircBox,
-    Circuit,
-    Conditional,
-    CustomGateDef,
-    Op,
-    OpType,
-    QControlBox,
-    Qubit,
-    StatePreparationBox,
-    Unitary1qBox,
-    Unitary2qBox,
-    Unitary3qBox,
-    reg_eq,
-    reg_neq,
-)
-from pytket.passes import (
-    CliffordSimp,
-    DecomposeBoxes,
-    FullPeepholeOptimise,
-    RebaseTket,
-    SequencePass,
-)
-from pytket.unit_id import _TEMP_BIT_NAME
-from pytket.utils.results import (
-    compare_statevectors,
-    compare_unitaries,
-    permute_rows_cols_in_unitary,
-)
 from qiskit import (
     ClassicalRegister,
     QuantumCircuit,
@@ -78,6 +48,23 @@ from qiskit.transpiler.preset_passmanagers.level2 import (  # type: ignore
 from qiskit_aer import Aer  # type: ignore
 from sympy import Symbol
 
+from pytket.circuit import (
+    Bit,
+    CircBox,
+    Circuit,
+    Conditional,
+    CustomGateDef,
+    Op,
+    OpType,
+    QControlBox,
+    Qubit,
+    StatePreparationBox,
+    Unitary1qBox,
+    Unitary2qBox,
+    Unitary3qBox,
+    reg_eq,
+    reg_neq,
+)
 from pytket.extensions.qiskit import IBMQBackend, qiskit_to_tk, tk_to_qiskit
 from pytket.extensions.qiskit.backends import (
     AerBackend,
@@ -86,6 +73,19 @@ from pytket.extensions.qiskit.backends import (
 from pytket.extensions.qiskit.qiskit_convert import _gate_str_2_optype
 from pytket.extensions.qiskit.result_convert import qiskit_result_to_backendresult
 from pytket.extensions.qiskit.tket_pass import TketAutoPass, TketPass
+from pytket.passes import (
+    CliffordSimp,
+    DecomposeBoxes,
+    FullPeepholeOptimise,
+    RebaseTket,
+    SequencePass,
+)
+from pytket.unit_id import _TEMP_BIT_NAME
+from pytket.utils.results import (
+    compare_statevectors,
+    compare_unitaries,
+    permute_rows_cols_in_unitary,
+)
 
 skip_remote_tests: bool = os.getenv("PYTKET_RUN_REMOTE_TESTS") is None
 

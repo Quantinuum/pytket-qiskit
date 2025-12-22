@@ -21,6 +21,13 @@ from typing import cast
 import numpy as np
 import pytest
 from hypothesis import given, strategies
+from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister  # type: ignore
+from qiskit_aer import Aer  # type: ignore
+from qiskit_aer.noise import ReadoutError  # type: ignore
+from qiskit_aer.noise.errors import depolarizing_error, pauli_error  # type: ignore
+from qiskit_aer.noise.noise_model import NoiseModel  # type: ignore
+from qiskit_ibm_runtime import QiskitRuntimeService  # type: ignore
+
 from pytket.architecture import Architecture, FullyConnected
 from pytket.backends import (
     CircuitNotRunError,
@@ -42,28 +49,6 @@ from pytket.circuit import (
     fresh_symbol,
     reg_eq,
 )
-from pytket.mapping import LexiLabellingMethod, LexiRouteRoutingMethod, MappingManager
-from pytket.passes import CliffordSimp, FlattenRelabelRegistersPass, SequencePass
-from pytket.pauli import Pauli, QubitPauliString
-from pytket.predicates import (
-    CompilationUnit,
-    ConnectivityPredicate,
-    NoMidMeasurePredicate,
-)
-from pytket.transform import Transform
-from pytket.utils.expectations import (
-    get_operator_expectation_value,
-    get_pauli_expectation_value,
-)
-from pytket.utils.operators import QubitPauliOperator
-from pytket.utils.results import compare_statevectors, compare_unitaries
-from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister  # type: ignore
-from qiskit_aer import Aer  # type: ignore
-from qiskit_aer.noise import ReadoutError  # type: ignore
-from qiskit_aer.noise.errors import depolarizing_error, pauli_error  # type: ignore
-from qiskit_aer.noise.noise_model import NoiseModel  # type: ignore
-from qiskit_ibm_runtime import QiskitRuntimeService  # type: ignore
-
 from pytket.extensions.qiskit import (
     AerBackend,
     AerDensityMatrixBackend,
@@ -82,6 +67,21 @@ from pytket.extensions.qiskit.backends.crosstalk_model import (
 )
 from pytket.extensions.qiskit.backends.ibm import _DEBUG_HANDLE_PREFIX
 from pytket.extensions.qiskit.backends.ibm_utils import _gen_lightsabre_transformation
+from pytket.mapping import LexiLabellingMethod, LexiRouteRoutingMethod, MappingManager
+from pytket.passes import CliffordSimp, FlattenRelabelRegistersPass, SequencePass
+from pytket.pauli import Pauli, QubitPauliString
+from pytket.predicates import (
+    CompilationUnit,
+    ConnectivityPredicate,
+    NoMidMeasurePredicate,
+)
+from pytket.transform import Transform
+from pytket.utils.expectations import (
+    get_operator_expectation_value,
+    get_pauli_expectation_value,
+)
+from pytket.utils.operators import QubitPauliOperator
+from pytket.utils.results import compare_statevectors, compare_unitaries
 
 skip_remote_tests: bool = os.getenv("PYTKET_RUN_REMOTE_TESTS") is None
 

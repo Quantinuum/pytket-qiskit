@@ -19,10 +19,10 @@ from typing import (
 )
 
 import numpy as np
+
 from pytket.backends.backendresult import BackendResult
 from pytket.circuit import Bit, Qubit, UnitID
 from pytket.utils.outcomearray import OutcomeArray
-
 from qiskit.result import Result  # type: ignore
 from qiskit.result.models import ExperimentResult  # type: ignore
 
@@ -118,10 +118,10 @@ def qiskit_experimentresult_to_backendresult(  # noqa: PLR0912, PLR0913
         elif "counts" in datadict and include_counts:
             qis_counts = datadict["counts"]
             counts = Counter(
-                dict(  # noqa: C402
-                    (_hex_to_outar([hexst], width), count)
+                {
+                    _hex_to_outar([hexst], width): count
                     for hexst, count in qis_counts.items()
-                )
+                }
             )
 
         if "statevector" in datadict and include_state:

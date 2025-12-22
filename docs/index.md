@@ -77,6 +77,7 @@ Making use of GPU simulation requires the qiskit-aer-gpu package. This can be in
 ```
 pip install qiskit-aer-gpu
 ```
+
 :::
 
 ## Access and Credentials
@@ -196,44 +197,44 @@ Every {py:class}`~pytket.backends.backend.Backend` in pytket has its own {py:met
 :widths: 25 25 25 25
 :header-rows: 1
 
-* - optimisation_level = 0
+- - optimisation_level = 0
   - optimisation_level = 1
   - optimisation_level = 2 [1]
   - optimisation_level = 3
-* - {py:meth}`~pytket.passes.DecomposeBoxes`
+- - {py:meth}`~pytket.passes.DecomposeBoxes`
   - {py:meth}`~pytket.passes.DecomposeBoxes`
   - {py:meth}`~pytket.passes.DecomposeBoxes`
   - {py:meth}`~pytket.passes.DecomposeBoxes`
-* - {py:meth}`~pytket.passes.AutoRebase` [2]
+- - {py:meth}`~pytket.passes.AutoRebase` [2]
   - {py:meth}`~pytket.passes.SynthesiseTket`
   - {py:meth}`~pytket.passes.FullPeepholeOptimise`
   - {py:meth}`~pytket.passes.RemoveBarriers`
-* - LightSabre [3]
+- - LightSabre [3]
   - LightSabre [3]
   - LightSabre [3]
   - {py:meth}`~pytket.passes.AutoRebase` [2]
-* - {py:meth}`~pytket.passes.AutoRebase` [2]
+- - {py:meth}`~pytket.passes.AutoRebase` [2]
   - {py:meth}`~pytket.passes.SynthesiseTket`
   - [`KAKDecomposition(allow_swaps=False)`](inv:#*.passes.KAKDecomposition)
   - {py:meth}`~pytket.passes.GreedyPauliSimp`
-* - {py:meth}`~pytket.passes.RemoveRedundancies`
+- - {py:meth}`~pytket.passes.RemoveRedundancies`
   - {py:meth}`~pytket.passes.AutoRebase` [2]
   - [`CliffordSimp(allow_swaps=False)`](inv:#*.passes.CliffordSimp)
   - {py:meth}`~pytket.passes.AutoRebase` [2]
-* -
+- -
   - {py:meth}`~pytket.passes.RemoveRedundancies`
   - {py:meth}`~pytket.passes.SynthesiseTket`
   - LightSabre [3]
-* -
+- -
   -
   - {py:meth}`~pytket.passes.AutoRebase` [2]
   - {py:meth}`~pytket.passes.SynthesiseTket`
-* -
+- -
   -
   - {py:meth}`~pytket.passes.RemoveRedundancies`
   - {py:meth}`~pytket.passes.AutoRebase` [2]
 
-* -
+- -
   -
   -
   - {py:meth}`~pytket.passes.RemoveRedundancies`
