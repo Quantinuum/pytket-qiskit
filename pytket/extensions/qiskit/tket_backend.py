@@ -130,7 +130,7 @@ class TketBackend(BackendV2):
         jobinfos = []
         for qc in run_input:
             tk_circ = qiskit_to_tk(qc)
-            if isinstance(self._backend, (AerStateBackend, AerUnitaryBackend)):
+            if isinstance(self._backend, AerStateBackend | AerUnitaryBackend):
                 tk_circ.remove_blank_wires()
             circ_list.append(tk_circ)
             jobinfos.append(JobInfo(qc.name, tk_circ.qubits, tk_circ.bits, n_shots))

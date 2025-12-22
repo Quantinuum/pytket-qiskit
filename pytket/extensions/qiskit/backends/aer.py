@@ -490,7 +490,7 @@ class _AerBaseBackend(Backend):
         job: AerJob = self._cache[handle]["job"]
         cancelled = job.cancel()
         if not cancelled:
-            warning(f"Unable to cancel job {cast('str', handle[0])}")  # noqa: LOG015, G004
+            warning(f"Unable to cancel job {cast('str', handle[0])}")  # noqa: G004, LOG015
 
     def circuit_status(self, handle: ResultHandle) -> CircuitStatus:
         self._check_handle_type(handle)

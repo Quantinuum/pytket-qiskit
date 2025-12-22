@@ -314,7 +314,7 @@
   config.
 - Update qiskit version to 0.40.
 - Update code to remove some deprecation warnings.
-- Work around <https://github.com/Qiskit/qiskit-terra/issues/7865>.
+- Work around https://github.com/Qiskit/qiskit-terra/issues/7865.
 
 ## 0.34.0 (January 2023)
 
