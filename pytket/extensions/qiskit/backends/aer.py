@@ -22,6 +22,9 @@ from logging import warning
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
+from qiskit_aer import Aer  # type: ignore
+from qiskit_aer.noise import NoiseModel  # type: ignore
+
 from pytket.architecture import Architecture, FullyConnected
 from pytket.backends import Backend, CircuitNotRunError, CircuitStatus, ResultHandle
 from pytket.backends.backendinfo import BackendInfo
@@ -56,9 +59,6 @@ from pytket.predicates import (
 from pytket.utils import prepare_circuit
 from pytket.utils.operators import QubitPauliOperator
 from pytket.utils.results import KwargTypes
-from qiskit_aer import Aer  # type: ignore
-from qiskit_aer.noise import NoiseModel  # type: ignore
-
 from qiskit import transpile  # type: ignore
 from qiskit.quantum_info.operators import Pauli as qk_Pauli  # type: ignore
 from qiskit.quantum_info.operators.symplectic.sparse_pauli_op import (  # type: ignore
@@ -490,7 +490,7 @@ class _AerBaseBackend(Backend):
         job: AerJob = self._cache[handle]["job"]
         cancelled = job.cancel()
         if not cancelled:
-            warning(f"Unable to cancel job {cast('str', handle[0])}")  # noqa: LOG015, G004
+            warning(f"Unable to cancel job {cast('str', handle[0])}")  # noqa: G004, LOG015
 
     def circuit_status(self, handle: ResultHandle) -> CircuitStatus:
         self._check_handle_type(handle)

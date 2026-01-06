@@ -26,6 +26,20 @@ from typing import (
 from warnings import warn
 
 import numpy as np
+from qiskit_ibm_runtime import (  # type: ignore
+    QiskitRuntimeService,
+    RuntimeJobV2,
+    SamplerOptions,
+    SamplerV2,
+    Session,
+)
+from qiskit_ibm_runtime.models.backend_configuration import (  # type: ignore
+    QasmBackendConfiguration,
+)
+from qiskit_ibm_runtime.models.backend_properties import (  # type: ignore
+    BackendProperties,
+)
+
 from pytket.architecture import Architecture, FullyConnected
 from pytket.backends import Backend, CircuitNotRunError, CircuitStatus, ResultHandle
 from pytket.backends.backendinfo import BackendInfo
@@ -62,20 +76,6 @@ from pytket.predicates import (
 from pytket.utils import prepare_circuit
 from pytket.utils.outcomearray import OutcomeArray
 from pytket.utils.results import KwargTypes
-from qiskit_ibm_runtime import (  # type: ignore
-    QiskitRuntimeService,
-    RuntimeJobV2,
-    SamplerOptions,
-    SamplerV2,
-    Session,
-)
-from qiskit_ibm_runtime.models.backend_configuration import (  # type: ignore
-    QasmBackendConfiguration,
-)
-from qiskit_ibm_runtime.models.backend_properties import (  # type: ignore
-    BackendProperties,
-)
-
 from qiskit.primitives import (  # type: ignore
     BitArray,
     DataBin,
@@ -84,7 +84,7 @@ from qiskit.primitives import (  # type: ignore
 )
 
 # RuntimeJobV2 has no queue_position attribute, which is referenced
-# via job_monitor see-> https://github.com/CQCL/pytket-qiskit/issues/48
+# via job_monitor see-> https://github.com/Quantinuum/pytket-qiskit/issues/48
 # therefore we can't use job_monitor until fixed
 # from qiskit.tools.monitor import job_monitor  # type: ignore
 from .._metadata import __extension_version__
@@ -730,7 +730,7 @@ class IBMQBackend(Backend):
                     warn(f"Unable to retrieve job {jobid}: {e}")  # noqa: B028
                     raise CircuitNotRunError(handle)  # noqa: B904
                 # RuntimeJobV2 has no queue_position attribute, which is referenced
-                # via job_monitor see-> https://github.com/CQCL/pytket-qiskit/issues/48
+                # via job_monitor see-> https://github.com/Quantinuum/pytket-qiskit/issues/48
                 # therefore we can't use job_monitor until fixed
                 if self._monitor and job:
                     #     job_monitor(job)

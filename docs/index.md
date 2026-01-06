@@ -77,6 +77,7 @@ Making use of GPU simulation requires the qiskit-aer-gpu package. This can be in
 ```
 pip install qiskit-aer-gpu
 ```
+
 :::
 
 ## Access and Credentials
@@ -240,9 +241,9 @@ Every {py:class}`~pytket.backends.backend.Backend` in pytket has its own {py:met
 
 :::
 
-- \[1\] If no value is specified then `optimisation_level` defaults to a value of 2.
-- \[2\] {py:meth}`~pytket.passes.AutoRebase` is a conversion to the gateset supported by the backend. For IBM quantum devices and emulators the supported gate set is either $\{X, SX, Rz, CX\}$, $\{X, SX, Rz, ECR\}$, or $\{X, SX, Rz, CZ\}$. The more idealised Aer simulators have a much broader range of supported gates.
-- \[3\] This is imported from qiskit and corresponds to the method in "LightSABRE: A Lightweight and Enhanced SABRE Algorithm", Henry Zou, Matthew Treinish, Kevin Hartman, Alexander Ivrii, Jake Lishman, arXiv:2409.08368.
+* \[1\] If no value is specified then `optimisation_level` defaults to a value of 2.
+* \[2\] {py:meth}`~pytket.passes.AutoRebase` is a conversion to the gateset supported by the backend. For IBM quantum devices and emulators the supported gate set is either $\{X, SX, Rz, CX\}$, $\{X, SX, Rz, ECR\}$, or $\{X, SX, Rz, CZ\}$. The more idealised Aer simulators have a much broader range of supported gates.
+* \[3\] This is imported from qiskit and corresponds to the method in "LightSABRE: A Lightweight and Enhanced SABRE Algorithm", Henry Zou, Matthew Treinish, Kevin Hartman, Alexander Ivrii, Jake Lishman, arXiv:2409.08368.
 
 **Note:** The {py:meth}`~.AerBackend.default_compilation_pass` for {py:class}`~.AerBackend` is the same as above if a {py:class}`~qiskit_aer.noise.NoiseModel` is used. A {py:class}`~qiskit_aer.noise.NoiseModel` implicitly defines connectivity constraints via edge errors. If no {py:class}`~qiskit_aer.noise.NoiseModel` is used then then any passes related to connectivity constraints are omitted from the {py:meth}`~.AerBackend.default_compilation_pass` for {py:class}`~.AerBackend`.
 
@@ -290,6 +291,6 @@ For usage of {py:class}`~tket_backend.TketBackend` see the [qiskit integration n
 .. toctree::
    :caption: Useful links
 
-   Issue tracker <https://github.com/CQCL/pytket-qiskit/issues>
+   Issue tracker <https://github.com/Quantinuum/pytket-qiskit/issues>
    PyPi <https://pypi.org/project/pytket-qiskit/>
 ```

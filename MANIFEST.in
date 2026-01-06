@@ -1,2 +1,2 @@
-include _metadata.py
+include pytket/extensions/qiskit/_metadata.py
 include pytket/extensions/qiskit/py.typed

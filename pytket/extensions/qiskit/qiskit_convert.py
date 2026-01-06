@@ -28,6 +28,16 @@ from uuid import UUID
 import numpy as np
 import sympy
 from numpy.typing import NDArray
+from qiskit_ibm_runtime.circuit import MidCircuitMeasure  # type: ignore
+from qiskit_ibm_runtime.models.backend_configuration import (  # type: ignore
+    QasmBackendConfiguration,
+)
+from qiskit_ibm_runtime.models.backend_properties import (  # type: ignore
+    BackendProperties,
+)
+from symengine import sympify  # type: ignore
+
+import qiskit.circuit.library.standard_gates as qiskit_gates  # type: ignore
 from pytket.architecture import Architecture, FullyConnected
 from pytket.circuit import (
     Bit,
@@ -54,16 +64,6 @@ from pytket.utils import (
     gen_term_sequence_circuit,
     permute_rows_cols_in_unitary,
 )
-from qiskit_ibm_runtime.circuit import MidCircuitMeasure  # type: ignore
-from qiskit_ibm_runtime.models.backend_configuration import (  # type: ignore
-    QasmBackendConfiguration,
-)
-from qiskit_ibm_runtime.models.backend_properties import (  # type: ignore
-    BackendProperties,
-)
-from symengine import sympify  # type: ignore
-
-import qiskit.circuit.library.standard_gates as qiskit_gates  # type: ignore
 from qiskit import (
     ClassicalRegister,
     QuantumCircuit,
@@ -94,11 +94,11 @@ from qiskit.circuit.library import (
 )
 
 if TYPE_CHECKING:
-    from pytket.circuit import UnitID
-    from pytket.unit_id import BitRegister
     from qiskit_ibm_runtime.ibm_backend import IBMBackend  # type: ignore
     from qiskit_ibm_runtime.models.backend_properties import Nduv
 
+    from pytket.circuit import UnitID
+    from pytket.unit_id import BitRegister
     from qiskit.circuit.quantumcircuitdata import QuantumCircuitData  # type: ignore
 
 _qiskit_gates_1q = {
@@ -608,7 +608,7 @@ def _build_rename_map(
 # Used for handling of IfElseOp
 # docs -> https://docs.quantum.ibm.com/api/qiskit/qiskit.circuit.IfElseOp
 # Examples -> https://docs.quantum.ibm.com/guides/classical-feedforward-and-control-flow
-# pytket-qiskit issue -> https://github.com/CQCL/pytket-qiskit/issues/415
+# pytket-qiskit issue -> https://github.com/Quantinuum/pytket-qiskit/issues/415
 def _pytket_circuits_from_ifelseop(
     if_else_op: IfElseOp,
     outer_builder: _CircuitBuilder,
@@ -967,7 +967,7 @@ def append_tk_command_to_qiskit(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915
     if optype == OpType.Conditional:
         assert isinstance(op, Conditional)
         if op.op.type == OpType.Conditional:
-            # See https://github.com/CQCL/pytket-qiskit/issues/442
+            # See https://github.com/Quantinuum/pytket-qiskit/issues/442
             raise NotImplementedError("Nested conditional not supported")
         if op.op.type == OpType.Phase:
             # conditional phase not supported
@@ -1170,7 +1170,7 @@ def tk_to_qiskit(
         if (qb.reg_name not in qreg_sizes) or (qb.index[0] >= qreg_sizes[qb.reg_name]):
             qreg_sizes.update({qb.reg_name: qb.index[0] + 1})
     c_regs = tkcirc.c_registers
-    if set(bit for reg in c_regs for bit in reg) != set(tkcirc.bits):  # noqa: C401
+    if {bit for reg in c_regs for bit in reg} != set(tkcirc.bits):
         raise NotImplementedError("Bit registers must be singly indexed from zero")
     qregmap = {}
     for reg_name, size in qreg_sizes.items():
