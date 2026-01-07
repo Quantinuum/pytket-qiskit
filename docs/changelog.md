@@ -4,6 +4,10 @@
 
 # Changelog
 
+## 0.76.0 (January 2026)
+
+- Update documentation
+
 ## 0.75.0 (December 2025)
 
 - Update minimum qiskit-ibm-runtime version requirement to 0.43.1.
