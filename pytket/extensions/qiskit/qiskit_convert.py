@@ -1035,7 +1035,8 @@ order or only one bit of one register"""
         if len(qargs) == 2:  # noqa: PLR2004
             z_gate = qiskit_gates.CZGate()
         else:
-            z_gate = qiskit_gates.ZGate().control(len(qargs) - 1)
+            z_gate_ = qiskit_gates.ZGate().control(len(qargs) - 1)
+            z_gate = z_gate_.to_mutable()
             z_gate.name = "mcz"
         _apply_qiskit_instruction(
             qcirc=qcirc, instruc=z_gate, qargs=qargs, condition=condition
