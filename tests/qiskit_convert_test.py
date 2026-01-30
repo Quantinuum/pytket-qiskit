@@ -454,7 +454,7 @@ def test_convert_cnz_to_qiskit() -> None:
     assert qc[0].name == "cz"
     circ = Circuit(3).add_gate(OpType.CnZ, [0, 1, 2])
     qc = tk_to_qiskit(circ)
-    assert qc[0].name == "mcz"
+    assert qc[0].name == "ccz"
 
 
 def test_gate_str_2_optype() -> None:
@@ -776,7 +776,7 @@ def test_multicontrolled_gate_conversion() -> None:
     assert my_tkc.n_gates_of_type(OpType.CnRy) == 2
     my_new_qc = tk_to_qiskit(my_tkc)
     qiskit_ops = my_new_qc.count_ops()
-    assert qiskit_ops["c3y"] and qiskit_ops["mcz"] and qiskit_ops["c3ry"] == 2
+    assert qiskit_ops["c3y"] and qiskit_ops["ccz"] and qiskit_ops["c3ry"] == 2
     tcirc = qiskit_to_tk(my_new_qc)
     unitary_after = tcirc.get_unitary()
     assert compare_unitaries(unitary_before, unitary_after)
@@ -1020,7 +1020,7 @@ def test_ccz_conversion() -> None:
     assert tkc_ccz.n_gates_of_type(OpType.CnZ) == tkc_ccz.n_gates == 2
     # bidirectional CnZ conversion already supported
     qc_ccz2 = tk_to_qiskit(tkc_ccz)
-    assert qc_ccz2.count_ops()["mcz"] == 2
+    assert qc_ccz2.count_ops()["ccz"] == 2
     tkc_ccz2 = qiskit_to_tk(qc_ccz2)
     assert compare_unitaries(tkc_ccz.get_unitary(), tkc_ccz2.get_unitary())
 
