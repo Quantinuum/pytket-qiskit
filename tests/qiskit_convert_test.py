@@ -776,7 +776,7 @@ def test_multicontrolled_gate_conversion() -> None:
     assert my_tkc.n_gates_of_type(OpType.CnRy) == 2
     my_new_qc = tk_to_qiskit(my_tkc)
     qiskit_ops = my_new_qc.count_ops()
-    assert qiskit_ops["c3y"] and qiskit_ops["ccz"] and qiskit_ops["c3ry"] == 2
+    assert qiskit_ops["c3y"] and qiskit_ops["c3z"] and qiskit_ops["c3ry"] == 2
     tcirc = qiskit_to_tk(my_new_qc)
     unitary_after = tcirc.get_unitary()
     assert compare_unitaries(unitary_before, unitary_after)
