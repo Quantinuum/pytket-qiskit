@@ -1,4 +1,4 @@
-# Copyright 2019-2024 Quantinuum
+# Copyright Quantinuum
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,8 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from typing import Optional
 
 from qiskit_aer.backends import AerSimulator  # type: ignore
 
@@ -39,7 +37,7 @@ class TketPass(TransformationPass):
         """Wraps a pytket compiler pass as a
         :py:class:`qiskit.transpiler.TransformationPass`. A
         :py:class:`qiskit.dagcircuit.DAGCircuit` is converted to a pytket
-        :py:class:`Circuit`. `tket_pass` will be run and the result is converted back.
+        :py:class:`~pytket._tket.circuit.Circuit`. `tket_pass` will be run and the result is converted back.
 
         :param tket_pass: The pytket compiler pass to run
         """
@@ -59,8 +57,8 @@ class TketPass(TransformationPass):
         circ = qiskit_to_tk(qc)
         self._pass.apply(circ)
         qc = tk_to_qiskit(circ)
-        new_param_lookup = {p._symbol_expr: p for p in qc.parameters}
-        subs_map = {new_param_lookup[p._symbol_expr]: p for p in old_parameters}
+        new_param_lookup = {p._symbol_expr: p for p in qc.parameters}  # noqa: SLF001
+        subs_map = {new_param_lookup[p._symbol_expr]: p for p in old_parameters}  # noqa: SLF001
         qc.assign_parameters(subs_map, inplace=True)
         newdag = circuit_to_dag(qc)
         newdag.name = dag.name
@@ -70,7 +68,7 @@ class TketPass(TransformationPass):
 class TketAutoPass(TketPass):
     """The tket compiler to be plugged in to the Qiskit compilation sequence"""
 
-    _aer_backend_map = {
+    _aer_backend_map = {  # noqa: RUF012
         "aer_simulator": AerBackend,
         "aer_simulator_statevector": AerStateBackend,
         "aer_simulator_unitary": AerUnitaryBackend,
@@ -80,7 +78,8 @@ class TketAutoPass(TketPass):
         self,
         backend: BackendV2,
         optimisation_level: int = 2,
-        token: Optional[str] = None,
+        instance: str | None = None,
+        token: str | None = None,
     ):
         """Identifies a Qiskit backend and provides the corresponding default
         compilation pass from pytket as a
@@ -91,10 +90,11 @@ class TketAutoPass(TketPass):
             compilation. Level 0 just solves the device constraints without
             optimising. Level 1 additionally performs some light optimisations.
             Level 2 adds more computationally intensive optimisations. Defaults to 2.
-        :param token: Authentication token to use the `QiskitRuntimeService`.
+        :param instance: Instance for the :py:class:`~qiskit_ibm_runtime.QiskitRuntimeService`.
+        :param token: Authentication token to use the :py:class:`~qiskit_ibm_runtime.QiskitRuntimeService`.
         """
         if isinstance(backend, AerSimulator):
             tk_backend = self._aer_backend_map[backend.name]()
         else:
-            tk_backend = IBMQBackend(backend.name, token=token)
+            tk_backend = IBMQBackend(backend.name, instance=instance, token=token)
         super().__init__(tk_backend.default_compilation_pass(optimisation_level))

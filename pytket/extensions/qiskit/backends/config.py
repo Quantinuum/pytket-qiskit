@@ -1,8 +1,8 @@
-# Copyright 2021-2023 Cambridge Quantum Computing
+# Copyright Quantinuum
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License atF
+# You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from pytket.config import PytketExtConfig
 
@@ -24,8 +24,8 @@ class QiskitConfig(PytketExtConfig):
 
     ext_dict_key: ClassVar[str] = "qiskit"
 
-    instance: Optional[str]
-    ibmq_api_token: Optional[str]
+    instance: str | None
+    ibmq_api_token: str | None
 
     @classmethod
     def from_extension_dict(
@@ -38,11 +38,11 @@ class QiskitConfig(PytketExtConfig):
 
 
 def set_ibmq_config(
-    instance: Optional[str] = None,
-    ibmq_api_token: Optional[str] = None,
+    instance: str | None = None,
+    ibmq_api_token: str | None = None,
 ) -> None:
-    """Set default values for any of hub, group, project or API token
-    for your IBMQ provider. Can be overridden in backend construction."""
+    """Set default values for instance or API token for your IBMQ provider. Can be
+    overridden in backend construction."""
 
     config = QiskitConfig.from_default_config_file()
     if instance is not None:

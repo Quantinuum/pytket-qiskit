@@ -1,4 +1,4 @@
-# Copyright 2019-2024 Quantinuum
+# Copyright Quantinuum
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from collections import Counter, defaultdict
 from collections.abc import Iterator, Sequence
 from typing import (
     Any,
-    Optional,
 )
 
 import numpy as np
@@ -70,10 +68,8 @@ def _result_is_empty_shots(result: ExperimentResult) -> bool:
     datadict = result.data.to_dict()
     return bool(
         len(datadict) == 0
-        or "memory" in datadict
-        and len(datadict["memory"]) == 0
-        or "counts" in datadict
-        and len(datadict["counts"]) == 0
+        or ("memory" in datadict and len(datadict["memory"]) == 0)
+        or ("counts" in datadict and len(datadict["counts"]) == 0)
     )
 
 
@@ -81,7 +77,7 @@ def _result_is_empty_shots(result: ExperimentResult) -> bool:
 # for example, a circuit with classical bits run on AerStateBackend will
 # return counts (whether or not there were measurements). The include_foo
 # arguments should be set based on what the backend supports.
-def qiskit_experimentresult_to_backendresult(
+def qiskit_experimentresult_to_backendresult(  # noqa: PLR0912, PLR0913
     result: ExperimentResult,
     include_counts: bool = True,
     include_shots: bool = True,
@@ -93,17 +89,18 @@ def qiskit_experimentresult_to_backendresult(
         raise RuntimeError(result.status)
 
     header = result.header
-    width = header.memory_slots
+    width = header["memory_slots"]
 
     c_bits, q_bits = None, None
-    if hasattr(header, "creg_sizes"):
+    if "creg_sizes" in header:
         c_bits = []
-        for name, size in header.creg_sizes:
+        for name, size in header["creg_sizes"]:
             for index in range(size):
                 c_bits.append(Bit(name, index))
-    if hasattr(header, "qreg_sizes"):
+
+    if "qreg_sizes" in header:
         q_bits = []
-        for name, size in header.qreg_sizes:
+        for name, size in header["qreg_sizes"]:
             for index in range(size):
                 q_bits.append(Qubit(name, index))
 
@@ -121,10 +118,10 @@ def qiskit_experimentresult_to_backendresult(
         elif "counts" in datadict and include_counts:
             qis_counts = datadict["counts"]
             counts = Counter(
-                dict(
-                    (_hex_to_outar([hexst], width), count)
+                {
+                    _hex_to_outar([hexst], width): count
                     for hexst, count in qis_counts.items()
-                )
+                }
             )
 
         if "statevector" in datadict and include_state:
@@ -148,7 +145,7 @@ def qiskit_experimentresult_to_backendresult(
     )
 
 
-def qiskit_result_to_backendresult(
+def qiskit_result_to_backendresult(  # noqa: PLR0913
     res: Result,
     include_counts: bool = True,
     include_shots: bool = True,
@@ -171,9 +168,9 @@ def backendresult_to_qiskit_resultdata(
     res: BackendResult,
     cbits: list[UnitID],
     qbits: list[UnitID],
-    final_map: Optional[dict[UnitID, UnitID]],
+    final_map: dict[UnitID, UnitID] | None,
 ) -> dict[str, Any]:
-    data: dict[str, Any] = dict()
+    data: dict[str, Any] = dict()  # noqa: C408
     if res.contains_state_results:
         qbits = _qiskit_ordered_uids(qbits)
         qbits.sort(reverse=True)
@@ -187,7 +184,7 @@ def backendresult_to_qiskit_resultdata(
     if res.contains_measured_results:
         cbits = _qiskit_ordered_uids(cbits)
         if final_map:
-            cbits = [final_map[c] for c in cbits]
+            cbits = [final_map.get(c, c) for c in cbits]
         stored_res = res.get_result(cbits)
         if stored_res.shots is not None:
             data["memory"] = [hex(i) for i in stored_res.shots.to_intlist()]

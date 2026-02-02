@@ -1,4 +1,4 @@
-# Copyright 2019-2024 Quantinuum
+# Copyright Quantinuum
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,11 +15,11 @@
 
 import json
 from collections.abc import Sequence
-from typing import Optional, cast
+from typing import Any, cast
 
 from pytket.architecture import Architecture, FullyConnected
 from pytket.backends import Backend, CircuitStatus, ResultHandle, StatusEnum
-from pytket.backends.backend import KwargTypes, ResultCache
+from pytket.backends.backend import KwargTypes
 from pytket.backends.backendinfo import BackendInfo
 from pytket.backends.backendresult import BackendResult
 from pytket.backends.resulthandle import _ResultIdTuple
@@ -32,8 +32,8 @@ from pytket.utils.outcomearray import OutcomeArray
 class MockShotBackend(Backend):
     def __init__(
         self,
-        arch: Optional[Architecture | FullyConnected] = None,
-        gate_set: Optional[set[OpType]] = None,
+        arch: Architecture | FullyConnected | None = None,
+        gate_set: set[OpType] | None = None,
     ):
         """Mock shot backend for testing qiskit embedding. This should only be used
         in conjunction with the TketBackend. The readout bitstring will always be 1s.
@@ -65,7 +65,7 @@ class MockShotBackend(Backend):
         return (int, str)
 
     @property
-    def backend_info(self) -> Optional[BackendInfo]:
+    def backend_info(self) -> BackendInfo | None:
         """Returns a BackendInfo constructed with the given architecture."""
         return BackendInfo(
             name="TketBackend",
@@ -78,7 +78,7 @@ class MockShotBackend(Backend):
     def process_circuits(
         self,
         circuits: Sequence[Circuit],
-        n_shots: Optional[int | Sequence[int]] = None,
+        n_shots: int | Sequence[int] | None = None,
         valid_check: bool = True,
         **kwargs: KwargTypes,
     ) -> list[ResultHandle]:
@@ -95,13 +95,13 @@ class MockShotBackend(Backend):
 
     def get_result(self, handle: ResultHandle, **kwargs: KwargTypes) -> BackendResult:
         """Always return a single readout containing all 1s."""
-        circ_rep = json.loads(cast(str, handle[1]))
+        circ_rep = json.loads(cast("str", handle[1]))
         circ = Circuit.from_dict(circ_rep)
         shots_list = [[1] * circ.n_bits]
         outcome_arr = OutcomeArray.from_readouts(shots_list)
         return BackendResult(shots=outcome_arr, q_bits=circ.qubits, c_bits=circ.bits)
 
-    def pop_result(self, handle: ResultHandle) -> Optional[ResultCache]:
+    def pop_result(self, handle: ResultHandle) -> dict[str, Any] | None:
         """Does nothing. Implementation is required by TketJob."""
         return None
 

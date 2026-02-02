@@ -1,4 +1,4 @@
-# Copyright 2019-2024 Quantinuum
+# Copyright Quantinuum
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 
 
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 from qiskit_aer.noise import NoiseModel  # type: ignore
@@ -40,11 +39,11 @@ from pytket.extensions.qiskit.qiskit_convert import _gate_str_2_optype
 
 
 @dataclass
-class FractionalUnitary:
+class _FractionalUnitary:
     """
     Wrapper for a fractional unitary gate.
 
-    :param cmd: the fractional UnitaryBox wrapped in a pytket Command
+    :param cmd: the fractional ``UnitaryXqBox`` wrapped in a pytket :py:class:`~pytket.circuit.Command`
     :param n_fractions: the number of fractional gates
         used to compose the original unitary gate.
     """
@@ -54,19 +53,20 @@ class FractionalUnitary:
 
 
 @dataclass
-class NoiseGate:
+class _NoiseGate:
     """
     Wrapper for a gate that simulates noise
-    :param cmd: gate wrapped in a pytket Command
-    :param type: one of zz_crosstalks, single_q_phase, two_q_induced_phase
-        and non_markovian.
+
+    :param cmd: gate wrapped in a pytket :py:class:`~pytket.circuit.Command`
+    :param type: one of ``"zz_crosstalks"``, ``"single_q_phase"``, ``"two_q_induced_phase"``
+        and ``"non_markovian"``.
     """
 
     cmd: Command
     type: str
 
 
-Instruction = FractionalUnitary | Command | NoiseGate
+Instruction = _FractionalUnitary | Command | _NoiseGate
 Slice = list[Instruction]
 EPS = 1e-9
 
@@ -91,7 +91,7 @@ class CrosstalkParams:
     :param gate_times: python dict to store the gate time information.
     :param phase_damping_error: dict specify amplitude phase damping error
         on each qubit
-    :param amplitude_damping_error: dict pecify amplitude damping error
+    :param amplitude_damping_error: dict specify amplitude damping error
         on each qubit
     """
 
@@ -106,7 +106,7 @@ class CrosstalkParams:
     amplitude_damping_error: dict[Qubit, float]
 
     def get_noise_model(self) -> NoiseModel:
-        """Construct a NoiseModel from phase_damping_error
+        """Construct a :py:class:`~qiskit_aer.noise.NoiseModel` from phase_damping_error
         and amplitude_damping_error"""
         noise_model = NoiseModel()
         for q, phase in self.phase_damping_error.items():
@@ -123,11 +123,11 @@ class CrosstalkParams:
         return noise_model
 
 
-class NoisyCircuitBuilder:
+class _NoisyCircuitBuilder:
     """Builder used to generate a noisy circuit"""
 
     Ibox = Unitary1qBox(np.eye(2))  # type: ignore
-    SUPPORTED_TYPES = {
+    SUPPORTED_TYPES = {  # noqa: RUF012
         OpType.Unitary1qBox,
         OpType.Unitary2qBox,
         OpType.Unitary3qBox,
@@ -163,8 +163,7 @@ class NoisyCircuitBuilder:
     def _get_qubits(inst: Instruction) -> list[Qubit]:
         if isinstance(inst, Command):
             return inst.qubits
-        else:
-            return inst.cmd.qubits
+        return inst.cmd.qubits
 
     def _append(
         self,
@@ -187,7 +186,7 @@ class NoisyCircuitBuilder:
             frontier[q] = slice_idx + 1
 
     def _fill_gaps(self, frontier: dict[Qubit, int]) -> None:
-        """Fill the gaps in the slices with identity `Unitary1qBox`es"""
+        """Fill the gaps in the slices with identity :py:class:`~pytket.circuit.Unitary1qBox` es"""
         for idx, s in enumerate(self._slices):
             slice_qubits = set().union(*[self._get_qubits(inst) for inst in s])
             gap_qs = self.all_qubits - slice_qubits
@@ -200,7 +199,7 @@ class NoisyCircuitBuilder:
         """Sort splices so each slice only contains independent instructions"""
         old_slices = self._slices.copy()
         self._slices = []
-        frontier = {q: 0 for q in self.all_qubits}
+        frontier = dict.fromkeys(self.all_qubits, 0)
         for s in old_slices:
             for inst in s:
                 self._append(inst, frontier)
@@ -208,12 +207,12 @@ class NoisyCircuitBuilder:
 
     @staticmethod
     def _get_ubox(u: np.ndarray) -> Unitary1qBox | Unitary2qBox | Unitary3qBox:
-        """Return a UnitaryxqBox for a given unitary"""
-        if u.shape[0] == 2:
+        """Return a ``UnitaryxqBox`` for a given unitary"""
+        if u.shape[0] == 2:  # noqa: PLR2004
             return Unitary1qBox(u)
-        if u.shape[0] == 4:
+        if u.shape[0] == 4:  # noqa: PLR2004
             return Unitary2qBox(u)
-        if u.shape[0] == 8:
+        if u.shape[0] == 8:  # noqa: PLR2004
             return Unitary3qBox(u)
         raise ValueError(f"Unsupported unitary shape: {u.shape}")
 
@@ -226,7 +225,7 @@ class NoisyCircuitBuilder:
             if cmd.op.type in [OpType.Measure, OpType.Reset]:
                 self._slices.append([cmd])
             else:
-                gt: Optional[float]
+                gt: float | None
                 if self.ct_params.virtual_z and cmd.op.type == OpType.Z:
                     gt = 1 / self.N
                 else:
@@ -237,7 +236,7 @@ class NoisyCircuitBuilder:
                     )
                 u = cmd.op.get_unitary()
                 n_fractions = round(self.N * gt)
-                if abs((self.N * gt) - n_fractions) > 1e-9:
+                if abs((self.N * gt) - n_fractions) > 1e-9:  # noqa: PLR2004
                     raise ValueError(
                         f"Command {cmd} cannot be factorised into equal slices"
                     )
@@ -246,7 +245,7 @@ class NoisyCircuitBuilder:
                 for _ in range(n_fractions):
                     u_i_box = self._get_ubox(u_i)
                     self._slices.append(
-                        [FractionalUnitary(Command(u_i_box, cmd.args), n_fractions)]
+                        [_FractionalUnitary(Command(u_i_box, cmd.args), n_fractions)]
                     )
 
     def _add_zz_crosstalks(self, noise_slice: Slice) -> None:
@@ -255,7 +254,7 @@ class NoisyCircuitBuilder:
                 Z = zz / self.N
                 if abs(Z) > EPS:
                     noise_slice.append(
-                        NoiseGate(
+                        _NoiseGate(
                             Command(Op.create(OpType.ZZPhase, Z), [q0, q1]),
                             "zz_crosstalks",
                         )
@@ -267,7 +266,7 @@ class NoisyCircuitBuilder:
                 Z = z / self.N
                 if abs(Z) > EPS:
                     noise_slice.append(
-                        NoiseGate(
+                        _NoiseGate(
                             Command(Op.create(OpType.Rz, Z), [q]), "single_q_phase"
                         )
                     )
@@ -277,7 +276,7 @@ class NoisyCircuitBuilder:
     ) -> None:
         for inst in unitary_slice:
             if (
-                isinstance(inst, FractionalUnitary)
+                isinstance(inst, _FractionalUnitary)
                 and inst.cmd.op.type == OpType.Unitary2qBox
             ):
                 qubits = inst.cmd.qubits
@@ -290,7 +289,7 @@ class NoisyCircuitBuilder:
                 Z = value[1] / inst.n_fractions
                 if abs(Z) > EPS:
                     noise_slice.append(
-                        NoiseGate(
+                        _NoiseGate(
                             Command(Op.create(OpType.Rz, Z), [value[0]]),
                             "two_q_induced_phase",
                         )
@@ -303,7 +302,7 @@ class NoisyCircuitBuilder:
             ZZ = zz / self.N
             if abs(ZZ) > EPS:
                 noise_slice.append(
-                    NoiseGate(
+                    _NoiseGate(
                         Command(Op.create(OpType.ZZPhase, ZZ), [two_level_q, q]),
                         "non_markovian",
                     )
@@ -311,15 +310,15 @@ class NoisyCircuitBuilder:
             if abs(ZX) > EPS:
                 noise_slice.extend(
                     [
-                        NoiseGate(
+                        _NoiseGate(
                             Command(Op.create(OpType.H), [q]),
                             "non_markovian",
                         ),
-                        NoiseGate(
+                        _NoiseGate(
                             Command(Op.create(OpType.ZZPhase, ZX), [two_level_q, q]),
                             "non_markovian",
                         ),
-                        NoiseGate(
+                        _NoiseGate(
                             Command(Op.create(OpType.H), [q]),
                             "non_markovian",
                         ),
@@ -335,7 +334,7 @@ class NoisyCircuitBuilder:
         self._add_non_markovian(base_noise_slice)
         while i < len(self._slices):
             noise_slice: Slice = []
-            if self.circ.n_qubits > 2:
+            if self.circ.n_qubits > 2:  # noqa: PLR2004
                 self._add_two_q_induced_phase(self._slices[i - 1], noise_slice)
             noise_slice.extend(base_noise_slice)
             self._slices.insert(i, noise_slice)
@@ -370,11 +369,11 @@ class NoisyCircuitBuilder:
         return self._slices
 
 
-def get_gate_times_from_backendinfo(
+def _get_gate_times_from_backendinfo(
     backend_info: BackendInfo,
 ) -> dict[tuple[OpType, tuple[Qubit, ...]], float]:
-    """Convert the gate time information stored in a `BackendInfo`
-    into the format required by `NoisyCircuitBuilder`"""
+    """Convert the gate time information stored in a :py:class:`~pytket.backends.backendinfo.BackendInfo`
+    into the format required by :py:class:`~._NoisyCircuitBuilder`"""
     if (
         "characterisation" not in backend_info.misc
         or "GateTimes" not in backend_info.misc["characterisation"]

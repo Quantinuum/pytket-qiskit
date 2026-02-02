@@ -1,4 +1,4 @@
-# Copyright 2019-2024 Quantinuum
+# Copyright Quantinuum
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import warnings
 from collections import Counter
 from math import pi
 
@@ -24,32 +25,34 @@ from qiskit import (
     QuantumRegister,
     transpile,
 )
-from qiskit.circuit import Parameter
-from qiskit.circuit.equivalence_library import (  # type: ignore
-    StandardEquivalenceLibrary,
-)
+from qiskit.circuit import IfElseOp, Parameter
 from qiskit.circuit.library import (
-    MCMT,
+    MCMTGate,
     PauliEvolutionGate,
-    RealAmplitudes,
     RYGate,
-    TwoLocal,
     UnitaryGate,
     XXPlusYYGate,
+    n_local,
+    real_amplitudes,
 )
-from qiskit.circuit.parameterexpression import ParameterExpression  # type: ignore
 from qiskit.quantum_info import Operator, SparsePauliOp, Statevector  # type: ignore
 from qiskit.synthesis import SuzukiTrotter  # type: ignore
-from qiskit.transpiler import PassManager  # type: ignore
-from qiskit.transpiler.passes import BasisTranslator  # type: ignore
+from qiskit.transpiler import (  # type: ignore
+    CouplingMap,
+    PassManager,
+    PassManagerConfig,
+)
+from qiskit.transpiler.preset_passmanagers.level2 import (  # type: ignore
+    level_2_pass_manager,
+)
 from qiskit_aer import Aer  # type: ignore
-from qiskit_ibm_runtime.fake_provider import FakeGuadalupeV2  # type: ignore
 from sympy import Symbol
 
 from pytket.circuit import (
     Bit,
     CircBox,
     Circuit,
+    Conditional,
     CustomGateDef,
     Op,
     OpType,
@@ -60,9 +63,13 @@ from pytket.circuit import (
     Unitary2qBox,
     Unitary3qBox,
     reg_eq,
+    reg_neq,
 )
 from pytket.extensions.qiskit import IBMQBackend, qiskit_to_tk, tk_to_qiskit
-from pytket.extensions.qiskit.backends import qiskit_aer_backend
+from pytket.extensions.qiskit.backends import (
+    AerBackend,
+    qiskit_aer_backend,
+)
 from pytket.extensions.qiskit.qiskit_convert import _gate_str_2_optype
 from pytket.extensions.qiskit.result_convert import qiskit_result_to_backendresult
 from pytket.extensions.qiskit.tket_pass import TketAutoPass, TketPass
@@ -73,6 +80,7 @@ from pytket.passes import (
     RebaseTket,
     SequencePass,
 )
+from pytket.unit_id import _TEMP_BIT_NAME
 from pytket.utils.results import (
     compare_statevectors,
     compare_unitaries,
@@ -92,28 +100,6 @@ def _get_qiskit_statevector(qc: QuantumCircuit) -> np.ndarray:
     qc.save_state()
     job = back.run(qc)
     return np.array(job.result().data()["statevector"].reverse_qargs().data)
-
-
-def test_parameterised_circuit_global_phase() -> None:
-    pass_1 = BasisTranslator(
-        StandardEquivalenceLibrary,
-        target_basis=FakeGuadalupeV2().configuration().basis_gates,
-    )
-    pass_2 = CliffordSimp()
-
-    qc = QuantumCircuit(2)
-    qc.ryy(Parameter("MyParam"), 0, 1)
-
-    pm = PassManager(pass_1)
-    qc = pm.run(qc)
-
-    tket_qc = qiskit_to_tk(qc)
-
-    pass_2.apply(tket_qc)
-
-    qc_2 = tk_to_qiskit(tket_qc)
-
-    assert type(qc_2.global_phase) is ParameterExpression
 
 
 def test_classical_barrier_error() -> None:
@@ -210,41 +196,6 @@ def test_convert() -> None:
     assert np.allclose(state0, state1, atol=1e-10)
 
 
-def test_symbolic() -> None:
-    pi2 = Symbol("pi2")
-    pi3 = Symbol("pi3")
-    pi0 = Symbol("pi0")
-    tkc = Circuit(3, 3, name="test").Ry(pi2, 1).Rx(pi3, 1).CX(1, 0)
-    tkc.add_phase(Symbol("pi0") * 2)
-    RebaseTket().apply(tkc)
-
-    qc = tk_to_qiskit(tkc)
-    tkc2 = qiskit_to_tk(qc)
-
-    assert tkc2.free_symbols() == {pi2, pi3, pi0}
-    tkc2.symbol_substitution({pi2: pi / 2, pi3: pi / 3, pi0: 0.1})
-
-    backend = Aer.get_backend("aer_simulator_statevector")
-    qc = tk_to_qiskit(tkc2)
-    assert qc.name == tkc.name
-    qc.save_state()
-    job = backend.run([qc])
-    state1 = job.result().get_statevector(qc)
-    state0 = np.array(
-        [
-            0.41273953 - 0.46964269j,
-            0.0 + 0.0j,
-            -0.0 + 0.0j,
-            -0.49533184 + 0.60309882j,
-            0.0 + 0.0j,
-            0.0 + 0.0j,
-            -0.0 + 0.0j,
-            -0.0 + 0.0j,
-        ]
-    )
-    assert np.allclose(state0, state1, atol=1e-10)
-
-
 def test_measures() -> None:
     qc = get_test_circuit(True)
     backend = qiskit_aer_backend("aer_simulator")
@@ -259,7 +210,7 @@ def test_measures() -> None:
     for result, count in counts1.items():
         result_str = result.replace(" ", "")
         if counts0[result_str] != count:
-            assert False
+            assert False  # noqa: B011
 
 
 def test_boxes() -> None:
@@ -380,17 +331,20 @@ def test_tketpass() -> None:
 
 @pytest.mark.timeout(None)
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
-def test_tketautopass(brisbane_backend: IBMQBackend) -> None:
+def test_tketautopass(brussels_backend: IBMQBackend) -> None:
     backends = [
         Aer.get_backend("aer_simulator_statevector"),
         qiskit_aer_backend("aer_simulator"),
         Aer.get_backend("aer_simulator_unitary"),
     ]
-    backends.append(brisbane_backend._backend)
+    backends.append(brussels_backend._backend)  # noqa: SLF001
     for back in backends:
         for o_level in range(3):
             tkpass = TketAutoPass(
-                back, o_level, token=os.getenv("PYTKET_REMOTE_QISKIT_TOKEN")
+                back,
+                o_level,
+                instance=os.getenv("PYTKET_REMOTE_IBM_CLOUD_INSTANCE"),
+                token=os.getenv("PYTKET_REMOTE_IBM_CLOUD_TOKEN"),
             )
             qc = get_test_circuit(True)
             pm = PassManager(passes=tkpass)
@@ -430,19 +384,10 @@ def test_conditions() -> None:
     c.add_unitary2qbox(
         ubox, Qubit(0), Qubit(1), condition_bits=[b[0]], condition_value=0
     )
-    c2 = c.copy()
-    qc = tk_to_qiskit(c)
-    c1 = qiskit_to_tk(qc)
-    assert len(c1.get_commands()) == 2
-    DecomposeBoxes().apply(c)
-    DecomposeBoxes().apply(c1)
-    assert c == c1
-
-    c2.Z(1, condition=reg_eq(b, 1))
-    qc = tk_to_qiskit(c2)
-    c1 = qiskit_to_tk(qc)
-    assert len(c1.get_commands()) == 3
-    # conversion loses rangepredicates so equality comparison not valid
+    # Converting a CircBox containing conditional gates gives an error
+    # TODO consider removing this restriction
+    with pytest.raises(NotImplementedError):
+        _ = tk_to_qiskit(c)
 
 
 def test_condition_errors() -> None:
@@ -499,6 +444,19 @@ def test_cnx() -> None:
     assert cmd.qubits[4] == Qubit(qregname, 4)
 
 
+def test_convert_cnz_to_qiskit() -> None:
+    # https://github.com/Quantinuum/pytket-qiskit/issues/460
+    circ = Circuit(1).add_gate(OpType.CnZ, [0])
+    qc = tk_to_qiskit(circ)
+    assert qc[0].name == "z"
+    circ = Circuit(2).add_gate(OpType.CnZ, [0, 1])
+    qc = tk_to_qiskit(circ)
+    assert qc[0].name == "cz"
+    circ = Circuit(3).add_gate(OpType.CnZ, [0, 1, 2])
+    qc = tk_to_qiskit(circ)
+    assert qc[0].name == "mcz"
+
+
 def test_gate_str_2_optype() -> None:
     samples = {
         "barrier": OpType.Barrier,
@@ -531,7 +489,7 @@ def test_customgate() -> None:
     states = []
     for qc in (qc1, qc2, correct_qc):
         qc.save_state()
-        qc = transpile(qc, backend)
+        qc = transpile(qc, backend)  # noqa: PLW2901
         job = backend.run([qc])
         states.append(job.result().get_statevector(qc))
 
@@ -565,7 +523,7 @@ def test_convert_result() -> None:
     assert compare_statevectors(state, correct_state)
     # also check that we don't return counts in tket result
     # even if the qiskit result includes them
-    assert tk_res._counts is None
+    assert tk_res._counts is None  # noqa: SLF001
 
     # check measured
     qc.measure(qr1[0], cr[0])
@@ -609,7 +567,7 @@ def add_cnry(
         else:
             # param was "raw", so needs an extra PI.
             new_ry_gate = RYGate(param * pi)
-            new_gate = MCMT(
+            new_gate = MCMTGate(
                 gate=new_ry_gate, num_ctrl_qubits=len(qbits) - 1, num_target_qubits=1
             )
             circ.append(new_gate, [qr[nn] for nn in qbits])
@@ -750,30 +708,7 @@ def test_cnry_conversion() -> None:
     )
 
 
-# pytket-extensions issue #72
-def test_parameter_equality() -> None:
-    param_a = Parameter("a")
-    param_b = Parameter("b")
-
-    circ = QuantumCircuit(2)
-    circ.rx(param_a, 0)
-    circ.ry(param_b, 1)
-    circ.cx(0, 1)
-    # fails with preserve_param_uuid=False
-    # as Parameter uuid attribute is not preserved
-    # and so fails equality check at assign_parameters
-    pytket_circ = qiskit_to_tk(circ, preserve_param_uuid=True)
-    final_circ = tk_to_qiskit(pytket_circ)
-
-    assert final_circ.parameters == circ.parameters
-
-    param_dict = dict(zip([param_a, param_b], [1, 2]))
-    final_circ.assign_parameters(param_dict, inplace=True)
-
-    assert len(final_circ.parameters) == 0
-
-
-# https://github.com/CQCL/pytket-extensions/issues/275
+# https://github.com/Quantinuum/pytket-extensions/issues/275
 def test_convert_multi_c_reg() -> None:
     c = Circuit()
     q0, q1 = c.add_q_register("q", 2)
@@ -784,7 +719,7 @@ def test_convert_multi_c_reg() -> None:
     c.add_gate(OpType.TK1, [0.5, 0.5, 0.5], [q0])
     qcirc = tk_to_qiskit(c)
     circ = qiskit_to_tk(qcirc)
-    assert circ.get_commands()[0].args == [m0, q1]
+    assert circ.get_commands()[1].args == [Bit("tk_SCRATCH_BIT", 0), q1]
 
 
 # test that tk_to_qiskit works after adding OpType.CRx and OpType.CRy
@@ -913,7 +848,7 @@ def test_tk_to_qiskit_redundancies() -> None:
 
 
 def test_ccx_conversion() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/117
+    # https://github.com/Quantinuum/pytket-qiskit/issues/117
     c00 = QuantumCircuit(3)
     c00.ccx(0, 1, 2, 0)  # 0 = "00" (little-endian)
     assert compare_unitaries(
@@ -947,20 +882,31 @@ def test_conditional_conversion() -> None:
     c_qiskit = tk_to_qiskit(c)
     c_tket = qiskit_to_tk(c_qiskit)
 
-    assert c_tket.to_dict() == c.to_dict()
+    expected_circ = Circuit(1, 2, "conditional_circ")
+    if_box = CircBox(Circuit(1, name="If").X(0))
+    expected_circ.add_circbox(
+        if_box, [Qubit(0)], condition_bits=[Bit(0)], condition_value=1
+    )
+
+    assert c_tket == expected_circ
 
 
 def test_conditional_conversion_2() -> None:
     c = Circuit(1, 2, "conditional_circ_2")
     c.X(0, condition_bits=[1], condition_value=1)
-
     c_qiskit = tk_to_qiskit(c)
     c_tket = qiskit_to_tk(c_qiskit)
 
-    assert c_tket.to_dict() == c.to_dict()
+    expected_circ = Circuit(1, 2, "conditional_circ_2")
+    if_box = CircBox(Circuit(1, name="If").X(0))
+    expected_circ.add_circbox(
+        if_box, [Qubit(0)], condition_bits=[Bit(1)], condition_value=1
+    )
+
+    assert c_tket == expected_circ
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/100
+# https://github.com/Quantinuum/pytket-qiskit/issues/100
 def test_state_prep_conversion_array_or_list() -> None:
     # State prep with list of real amplitudes
     ghz_state_permuted = np.array([0, 0, 1 / np.sqrt(2), 0, 0, 0, 0, 1 / np.sqrt(2)])
@@ -1052,7 +998,7 @@ def test_conversion_to_tket_with_and_without_resets() -> None:
 
 
 def test_unitary_gate() -> None:
-    # https://github.com/CQCL/pytket-qiskit/issues/122
+    # https://github.com/Quantinuum/pytket-qiskit/issues/122
     qkc = QuantumCircuit(3)
     for n in range(4):
         u = np.eye(1 << n, dtype=complex)
@@ -1118,23 +1064,18 @@ def test_failed_conversion_error() -> None:
         qiskit_to_tk(qc)
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/200
-def test_RealAmplitudes_numeric_params() -> None:
+# https://github.com/Quantinuum/pytket-qiskit/issues/200
+def test_real_amplitudes_numeric_params() -> None:
     qc = QuantumCircuit(3)
     params = [np.pi / 2] * 9
-    real_amps1 = RealAmplitudes(3, reps=2)
+    real_amps1 = real_amplitudes(3, reps=2)
     real_amps2 = real_amps1.assign_parameters(params)
     qc.compose(real_amps2, qubits=[0, 1, 2], inplace=True)
     # Unitary operator of the qiskit circuit. Order reversed from little -> big endian.
     # The reversal means we can check it for equivalence with a tket unitary
     qiskit_unitary = Operator(qc.reverse_bits()).data
     converted_tkc = qiskit_to_tk(qc)
-    assert converted_tkc.n_gates == 1
-    assert converted_tkc.n_gates_of_type(OpType.CircBox) == 1
-    circbox_op = converted_tkc.get_commands()[0].op
-    assert isinstance(circbox_op, CircBox)
-    assert circbox_op.get_circuit().name == "RealAmplitudes"
-    DecomposeBoxes().apply(converted_tkc)
+    assert converted_tkc.n_gates == 13
     assert converted_tkc.n_gates_of_type(OpType.CX) == 4
     assert converted_tkc.n_gates_of_type(OpType.Ry) == 9
     unitary1 = converted_tkc.get_unitary()
@@ -1145,9 +1086,10 @@ def test_RealAmplitudes_numeric_params() -> None:
     assert compare_unitaries(unitary1, unitary2)
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/256
+# https://github.com/Quantinuum/pytket-qiskit/issues/256
+@pytest.mark.xfail(reason="Limited support for symbolic conversions")
 def test_symbolic_param_conv() -> None:
-    qc = TwoLocal(1, "ry", "cz", reps=1, entanglement="linear")
+    qc = n_local(2, "ry", "cz", reps=1, entanglement="linear")
     qc_transpiled = transpile(
         qc, basis_gates=["sx", "rz", "cx", "x"], optimization_level=3
     )
@@ -1166,9 +1108,342 @@ def test_symbolic_param_conv() -> None:
     )
 
 
-# https://github.com/CQCL/pytket-qiskit/issues/337
+def test_implicit_swap_warning() -> None:
+    c = Circuit(2).H(0).SWAP(0, 1)
+    c.replace_SWAPs()
+    c.measure_all()
+    with pytest.warns(UserWarning, match="The pytket Circuit contains implicit qubit"):
+        tk_to_qiskit(c)
+
+    shots_backend = AerBackend()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        shots_backend.run_circuit(c)
+
+
+# https://github.com/Quantinuum/pytket-qiskit/issues/337
 def test_nonregister_bits() -> None:
     c = Circuit(1).X(0).measure_all()
     c.rename_units({Bit(0): Bit(1)})
     with pytest.raises(NotImplementedError):
         tk_to_qiskit(c)
+
+
+# https://github.com/Quantinuum/pytket-qiskit/issues/415
+def test_ifelseop_two_branches() -> None:
+    qreg = QuantumRegister(1, "r")
+    creg = ClassicalRegister(1, "s")
+    circuit = QuantumCircuit(qreg, creg)
+
+    circuit.h(qreg[0])
+    circuit.measure(qreg[0], creg[0])
+
+    with circuit.if_test((creg[0], 1)) as else_:
+        circuit.h(qreg[0])
+    with else_:
+        circuit.x(qreg[0])
+    circuit.measure(qreg[0], creg[0])
+
+    tkc = qiskit_to_tk(circuit)
+    tkc.name = "test_circ"
+
+    # Manually build the expected pytket Circuit.
+    # Validate against tkc.
+    expected_circ = Circuit(name="test_circ")
+    r_reg = expected_circ.add_q_register("r", 1)
+    s_reg = expected_circ.add_c_register("s", 1)
+    expected_circ.H(r_reg[0])
+    expected_circ.Measure(r_reg[0], s_reg[0])
+
+    h_circ = Circuit()
+    h_reg = h_circ.add_q_register("r", 1)
+    h_circ.name = "If"
+    h_circ.H(h_reg[0])
+
+    x_circ = Circuit()
+    x_reg = x_circ.add_q_register("r", 1)
+    x_circ.name = "Else"
+    x_circ.X(x_reg[0])
+
+    expected_circ.add_circbox(
+        CircBox(h_circ), [r_reg[0]], condition_bits=[s_reg[0]], condition_value=1
+    )
+    expected_circ.add_circbox(
+        CircBox(x_circ), [r_reg[0]], condition_bits=[s_reg[0]], condition_value=0
+    )
+
+    expected_circ.Measure(r_reg[0], s_reg[0])
+
+    assert expected_circ == tkc
+
+
+# https://github.com/Quantinuum/pytket-qiskit/issues/415
+def test_ifelseop_one_branch() -> None:
+    qubits = QuantumRegister(1, "q1")
+    clbits = ClassicalRegister(1, "c1")
+    circuit = QuantumCircuit(qubits, clbits)
+    (q0,) = qubits
+    (c0,) = clbits
+
+    circuit.h(q0)
+    circuit.measure(q0, c0)
+    with circuit.if_test((c0, 1)):
+        circuit.x(q0)
+    circuit.measure(q0, c0)
+
+    tket_circ_if_else = qiskit_to_tk(circuit)
+    tket_circ_if_else.name = "test_circ"
+
+    # Manually build the expected pytket Circuit.
+    # Validate against tket_circ_if_else.
+    expected_circ = Circuit()
+    expected_circ.name = "test_circ"
+    q1_tk = expected_circ.add_q_register("q1", 1)
+    c1_tk = expected_circ.add_c_register("c1", 1)
+    expected_circ.H(q1_tk[0])
+    expected_circ.Measure(q1_tk[0], c1_tk[0])
+    x_circ = Circuit()
+    x_circ.name = "If"
+    xq1 = x_circ.add_q_register("q1", 1)
+    x_circ.X(xq1[0])
+    expected_circ.add_circbox(
+        CircBox(x_circ), [q1_tk[0]], condition_bits=[c1_tk[0]], condition_value=1
+    )
+
+    expected_circ.Measure(q1_tk[0], c1_tk[0])
+
+    assert tket_circ_if_else == expected_circ
+
+
+# https://github.com/Quantinuum/pytket-qiskit/issues/452
+def test_ifelseop_reg_cond_if() -> None:
+    qreg = QuantumRegister(3, "q")
+    creg = ClassicalRegister(3, "c")
+    circuit = QuantumCircuit(creg, qreg)
+    (q0, q1, q2) = qreg
+    (c0, c1, c2) = creg
+    circuit.h(q0)
+    circuit.h(q1)
+    circuit.h(q2)
+    circuit.measure(q0, c0)
+    circuit.measure(q1, c1)
+    circuit.measure(q2, c2)
+    # Condition is on a register not a bit
+    with circuit.if_test((creg, 2)):
+        circuit.x(q0)
+        circuit.y(q1)
+        circuit.z(q2)
+    circuit.measure(q0, c0)
+    circuit.measure(q1, c1)
+    circuit.measure(q2, c2)
+
+    tkc: Circuit = qiskit_to_tk(circuit)
+    tkc.name = "test_circ"
+
+    expected_circ = Circuit()
+    expected_circ.name = "test_circ"
+    qreg_tk = expected_circ.add_q_register("q", 3)
+    creg_tk = expected_circ.add_c_register("c", 3)
+    expected_circ.H(qreg_tk[0])
+    expected_circ.H(qreg_tk[1])
+    expected_circ.H(qreg_tk[2])
+    expected_circ.Measure(qreg_tk[0], creg_tk[0])
+    expected_circ.Measure(qreg_tk[1], creg_tk[1])
+    expected_circ.Measure(qreg_tk[2], creg_tk[2])
+
+    pauli_circ = Circuit()
+    pauli_circ.name = "If"
+    pauli_qreg = pauli_circ.add_q_register("q", 3)
+    pauli_circ.X(pauli_qreg[0]).Y(pauli_qreg[1]).Z(pauli_qreg[2])
+    expected_circ.add_circbox(
+        CircBox(pauli_circ),
+        [qreg_tk[0], qreg_tk[1], qreg_tk[2]],
+        condition=reg_eq(creg_tk, 2),
+    )
+
+    expected_circ.Measure(qreg_tk[0], creg_tk[0])
+    expected_circ.Measure(qreg_tk[1], creg_tk[1])
+    expected_circ.Measure(qreg_tk[2], creg_tk[2])
+
+    assert expected_circ == tkc
+
+
+# https://github.com/Quantinuum/pytket-qiskit/issues/452
+def test_ifelseop_reg_cond_if_else() -> None:
+    qreg = QuantumRegister(2, "q")
+    creg = ClassicalRegister(2, "c")
+    circuit = QuantumCircuit(creg, qreg)
+    (q0, q1) = qreg
+    (c0, c1) = creg
+
+    circuit.h(q0)
+    circuit.h(q1)
+    circuit.measure(q0, c0)
+    circuit.measure(q1, c1)
+    # Condition is on a register not a bit
+    with circuit.if_test((creg, 2)) as else_:
+        circuit.x(q0)
+        circuit.x(q1)
+    with else_:
+        circuit.y(q0)
+        circuit.y(q1)
+    circuit.measure(q0, c0)
+    circuit.measure(q1, c1)
+    tkc: Circuit = qiskit_to_tk(circuit)
+    tkc.name = "test_circ"
+
+    expected_circ = Circuit()
+    expected_circ.name = "test_circ"
+    qreg_tk = expected_circ.add_q_register("q", 2)
+    creg_tk = expected_circ.add_c_register("c", 2)
+    expected_circ.H(qreg_tk[0])
+    expected_circ.H(qreg_tk[1])
+    expected_circ.Measure(qreg_tk[0], creg_tk[0])
+    expected_circ.Measure(qreg_tk[1], creg_tk[1])
+
+    x_circ2 = Circuit()
+    x_circ2.name = "If"
+    x_qreg = x_circ2.add_q_register("q", 2)
+    x_circ2.X(x_qreg[0]).X(x_qreg[1])
+    expected_circ.add_circbox(
+        CircBox(x_circ2), [qreg_tk[0], qreg_tk[1]], condition=reg_eq(creg_tk, 2)
+    )
+
+    y_circ2 = Circuit()
+    y_circ2.name = "Else"
+    y_qreg = y_circ2.add_q_register("q", 2)
+    y_circ2.Y(y_qreg[0]).Y(y_qreg[1])
+    expected_circ.add_circbox(
+        CircBox(y_circ2), [qreg_tk[0], qreg_tk[1]], condition=reg_neq(creg_tk, 2)
+    )
+
+    expected_circ.Measure(qreg_tk[0], creg_tk[0])
+    expected_circ.Measure(qreg_tk[1], creg_tk[1])
+
+    assert expected_circ == tkc
+
+
+def test_range_preds_with_conditionals() -> None:
+    # https://github.com/Quantinuum/pytket-qiskit/issues/375
+    c = Circuit(1, 1)
+    treg = c.add_c_register(_TEMP_BIT_NAME, 1)
+    c.add_c_range_predicate(1, 1, [Bit(0)], treg[0])
+    c.add_gate(OpType.X, [Qubit(0)], condition_bits=[treg[0]], condition_value=1)
+    c.add_gate(OpType.Y, [Qubit(0)], condition_bits=[treg[0]], condition_value=1)
+    qkc = tk_to_qiskit(c)
+    assert len(qkc) == 2
+    assert len(qkc.qubits) == 1
+    assert len(qkc.clbits) == 1
+
+
+def test_nested_conditionals() -> None:
+    # https://github.com/Quantinuum/pytket-qiskit/issues/442
+    c0 = Circuit(1, 1).X(0, condition_bits=[0], condition_value=1)
+    cbox = CircBox(c0)
+    c = Circuit(1, 2)
+    c.add_circbox(cbox, [Qubit(0), Bit(1)], condition_bits=[Bit(0)], condition_value=1)
+    DecomposeBoxes().apply(c)
+    with pytest.raises(NotImplementedError):
+        # For now we do not support conversion of nested conditionals.
+        _qkc = tk_to_qiskit(c)
+
+
+def _fetch_if_elses(qc: QuantumCircuit) -> list[IfElseOp]:
+    """Get a list of all IfElseOp instructions in a QuantumCircuit."""
+    if_else_list = []
+    for datum in qc.data:
+        instr, _, _ = datum.operation, datum.qubits, datum.clbits
+        if type(instr) is IfElseOp:
+            if_else_list.append(instr)
+    return if_else_list
+
+
+def test_qiskitv2_conversions() -> None:
+    circ = Circuit(4, 2)
+    circ.H(0)
+    circ.Measure(0, 0)
+    circ.Measure(1, 1)
+    prep = StatePreparationBox(1 / np.sqrt(3) * np.array([0, 1, 1, 0, 1, 0, 0, 0]))
+    circ.add_gate(
+        prep,
+        args=[Qubit(0), Qubit(1), Qubit(2)],
+        condition_bits=[Bit(0)],
+        condition_value=1,
+    )
+    circ.add_gate(
+        OpType.CnZ,
+        [Qubit(0), Qubit(1), Qubit(2), Qubit(3)],
+        condition_bits=[Bit(0)],
+        condition_value=0,
+    )
+    circ.TK1(
+        0.7,
+        0.8,
+        0.9,
+        qubit=Qubit(0),
+        condition_bits=[Bit(0), Bit(1)],
+        condition_value=2,
+    )
+    qc = tk_to_qiskit(circ)
+    if_list = _fetch_if_elses(qc)
+    assert qc.count_ops()["if_else"] == 3 == len(if_list)
+    if_prep, if_cnz, if_tk1 = tuple(if_list)
+    # Check condition values of the converted QuantumCircuit
+    assert if_prep.condition[1] == 1
+    assert if_cnz.condition[1] == 0
+    assert if_tk1.condition == (ClassicalRegister(2, "c"), 2)
+
+
+# https://github.com/Quantinuum/pytket-qiskit/issues/514
+def test_bit_ref_circuit() -> None:
+    qreg = QuantumRegister(1)
+    qreg_setter = QuantumRegister(2)
+    creg_A = ClassicalRegister(1)
+    creg_B = ClassicalRegister(1)
+
+    qc = QuantumCircuit(qreg, qreg_setter, creg_A, creg_B)
+    qc.x(qreg_setter[1])
+
+    with qc.if_test((creg_A[0], 0)) as _else:
+        qc.measure(qreg_setter[1], creg_B[0])
+    with _else:
+        qc.measure(qreg_setter[0], creg_B[0])
+    tkc = qiskit_to_tk(qc)
+    cregs = tkc.c_registers
+    assert len(cregs) == 2
+    a_creg = cregs[0]
+    b_creg = cregs[1]
+    assert a_creg.size == 1
+    assert b_creg.size == 1
+
+
+def test_round_trip_with_qiskit_transpilation() -> None:
+    circ = Circuit(4, 1)
+    circ.H(0).Measure(0, 0)
+    circ.U1(1 / 2, Qubit(1), condition_bits=[Bit(0)], condition_value=1)
+    circ.U1(1 / 4, Qubit(2), condition_bits=[Bit(0)], condition_value=1)
+    circ.U1(1 / 8, Qubit(3), condition_bits=[Bit(0)], condition_value=1)
+
+    qc = tk_to_qiskit(circ)
+
+    coupling = CouplingMap(
+        [[0, 1], [1, 0], [1, 2], [2, 1], [2, 3], [3, 2], [3, 4], [4, 3]]
+    )
+    config = PassManagerConfig(
+        coupling_map=coupling,
+        basis_gates=["cx", "sx", "x", "rz", "if_else"],
+        seed_transpiler=0,
+    )
+    pass_manager = level_2_pass_manager(config)
+    compiled_qc = pass_manager.run(qc)
+    tk_circ = qiskit_to_tk(compiled_qc)
+    assert tk_circ.n_gates_of_type(OpType.Conditional) == 3
+    conditional_cmds = tk_circ.commands_of_type(OpType.Conditional)
+    for cmd in conditional_cmds:
+        assert isinstance(cmd.op, Conditional)
+        assert isinstance(cmd.op.op, CircBox)
+        if_circ = cmd.op.op.get_circuit()
+        # Assert that each "If" block has only one Z-axis rotation
+        assert if_circ.name == "If"
+        assert if_circ.n_gates == 1
+        assert if_circ.n_gates_of_type(OpType.Rz) == 1

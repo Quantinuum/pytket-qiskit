@@ -1,4 +1,4 @@
-# Copyright 2019-2024 Quantinuum
+# Copyright Quantinuum
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 from collections.abc import Sequence
 from typing import (
     TYPE_CHECKING,
-    Any,
     Optional,
 )
 
@@ -41,9 +40,9 @@ if TYPE_CHECKING:
 
 
 class IBMQEmulatorBackend(Backend):
-    """A backend which uses the AerBackend to loaclly emulate the behaviour of
-    IBMQBackend. Identical to :py:class:`IBMQBackend` except there is no `monitor`
-    parameter. Performs the same compilation and predicate checks as IBMQBackend.
+    """A backend which uses the AerBackend to locally emulate the behaviour of
+    :py:class:`~.IBMQBackend`. Identical to :py:class:`~.IBMQBackend` except there is no ``monitor``
+    parameter. Performs the same compilation and predicate checks as :py:class:`~.IBMQBackend`.
     Requires a valid IBM account.
     """
 
@@ -56,9 +55,10 @@ class IBMQEmulatorBackend(Backend):
     def __init__(
         self,
         backend_name: str,
-        instance: Optional[str] = None,
+        instance: str | None = None,
         service: Optional["QiskitRuntimeService"] = None,
-        token: Optional[str] = None,
+        token: str | None = None,
+        use_fractional_gates: bool = False,
     ):
         super().__init__()
         self._ibmq = IBMQBackend(
@@ -66,40 +66,44 @@ class IBMQEmulatorBackend(Backend):
             instance=instance,
             service=service,
             token=token,
+            use_fractional_gates=use_fractional_gates,
         )
 
         # Get noise model:
-        self._noise_model = NoiseModel.from_backend(self._ibmq._backend)
+        self._noise_model = NoiseModel.from_backend(self._ibmq._backend)  # noqa: SLF001
 
         # Construct AerBackend based on noise model:
         self._aer = AerBackend(noise_model=self._noise_model)
 
         # cache of results keyed by job id and circuit index
-        self._ibm_res_cache: dict[tuple[str, int], Counter] = dict()
+        self._ibm_res_cache: dict[tuple[str, int], Counter] = dict()  # noqa: C408
 
     @property
     def backend_info(self) -> BackendInfo:
-        return self._ibmq._backend_info
+        return self._ibmq._backend_info  # noqa: SLF001
 
     @property
     def required_predicates(self) -> list[Predicate]:
         return self._ibmq.required_predicates
 
+    @property
+    def _uses_lightsabre(self) -> bool:
+        return True
+
     def default_compilation_pass(
         self,
         optimisation_level: int = 2,
-        placement_options: Optional[dict[str, Any]] = None,
     ) -> BasePass:
         """
-        See documentation for :py:meth:`IBMQBackend.default_compilation_pass`.
+        See documentation for :py:meth:`~.IBMQBackend.default_compilation_pass`.
         """
         return self._ibmq.default_compilation_pass(
-            optimisation_level=optimisation_level, placement_options=placement_options
+            optimisation_level=optimisation_level
         )
 
     @property
     def _result_id_type(self) -> _ResultIdTuple:
-        return self._aer._result_id_type
+        return self._aer._result_id_type  # noqa: SLF001
 
     def rebase_pass(self) -> BasePass:
         return self._ibmq.rebase_pass()
@@ -107,17 +111,17 @@ class IBMQEmulatorBackend(Backend):
     def process_circuits(
         self,
         circuits: Sequence[Circuit],
-        n_shots: None | int | Sequence[Optional[int]] = None,
+        n_shots: None | int | Sequence[int | None] = None,
         valid_check: bool = True,
         **kwargs: KwargTypes,
     ) -> list[ResultHandle]:
         """
-        See :py:meth:`pytket.backends.Backend.process_circuits`.
-        Supported kwargs: `seed`, `postprocess`.
+        See :py:meth:`pytket.backends.backend.Backend.process_circuits`.
+        Supported kwargs: ``seed``, ``postprocess``.
         """
 
         if valid_check:
-            self._ibmq._check_all_circuits(circuits)
+            self._ibmq._check_all_circuits(circuits)  # noqa: SLF001
         return self._aer.process_circuits(
             circuits, n_shots=n_shots, valid_check=False, **kwargs
         )
@@ -130,7 +134,7 @@ class IBMQEmulatorBackend(Backend):
 
     def get_result(self, handle: ResultHandle, **kwargs: KwargTypes) -> BackendResult:
         """
-        See :py:meth:`pytket.backends.Backend.get_result`.
+        See :py:meth:`pytket.backends.backend.Backend.get_result`.
         Supported kwargs: none.
         """
         return self._aer.get_result(handle)

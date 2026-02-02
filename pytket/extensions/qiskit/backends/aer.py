@@ -1,4 +1,4 @@
-# Copyright 2019-2024 Quantinuum
+# Copyright Quantinuum
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
 from logging import warning
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 from qiskit_aer import Aer  # type: ignore
@@ -35,19 +35,21 @@ from pytket.passes import (
     AutoRebase,
     BasePass,
     CliffordSimp,
-    CXMappingPass,
+    CustomPassMap,
     DecomposeBoxes,
+    DefaultMappingPass,
     FullPeepholeOptimise,
-    NaivePlacementPass,
+    GreedyPauliSimp,
+    RemoveBarriers,
     SequencePass,
     SynthesiseTket,
 )
 from pytket.pauli import Pauli, QubitPauliString
-from pytket.placement import NoiseAwarePlacement
 from pytket.predicates import (
     ConnectivityPredicate,
     DefaultRegisterPredicate,
     GateSetPredicate,
+    MaxNQubitsPredicate,
     NoBarriersPredicate,
     NoClassicalControlPredicate,
     NoFastFeedforwardPredicate,
@@ -71,9 +73,9 @@ from ..qiskit_convert import (
 from ..result_convert import qiskit_result_to_backendresult
 from .crosstalk_model import (
     CrosstalkParams,
-    NoisyCircuitBuilder,
+    _NoisyCircuitBuilder,
 )
-from .ibm_utils import _STATUS_MAP, _batch_circuits
+from .ibm_utils import _STATUS_MAP, _batch_circuits, _gen_lightsabre_transformation
 
 if TYPE_CHECKING:
     from qiskit_aer import AerJob
@@ -118,14 +120,14 @@ def qiskit_aer_backend(backend_name: str) -> "QiskitAerBackend":
     """Find a qiskit backend with the given name.
 
     If more than one backend with the given name is available, emit a warning
-    and return the first one in the list returned by `Aer.backends()`.
+    and return the first one in the list returned by :py:meth:`~qiskit_aer.AerProvider.backends`.
     """
     candidates = [b for b in Aer.backends() if b.name == backend_name]
     n_candidates = len(candidates)
     if n_candidates == 0:
         raise ValueError(f"No backend with name '{backend_name}' is available.")
     if n_candidates > 1:
-        warnings.warn(
+        warnings.warn(  # noqa: B028
             f"More than one backend with name '{backend_name}' \
 is available. Picking one."
         )
@@ -139,9 +141,15 @@ class _AerBaseBackend(Backend):
     _backend_info: BackendInfo
     _memory: bool
     _required_predicates: list[Predicate]
-    _noise_model: Optional[NoiseModel] = None
+    _noise_model: NoiseModel | None = None
     _has_arch: bool = False
     _needs_transpile: bool = False
+
+    # Map from (job ID, circuit index) to (number of qubits, postprocessing circuit),
+    # i.e. from the first two components of the ResultHandle to the last two.
+    _circuit_data: dict[
+        tuple[int | float | complex | str | bool | bytes, int], tuple[int, str]
+    ] = {}  # noqa: RUF012
 
     @property
     def required_predicates(self) -> list[Predicate]:
@@ -150,6 +158,10 @@ class _AerBaseBackend(Backend):
     @property
     def _result_id_type(self) -> _ResultIdTuple:
         return (str, int, int, str)
+
+    @property
+    def _uses_lightsabre(self) -> bool:
+        return self._has_arch and self._backend_info.architecture.coupling  # type: ignore
 
     @property
     def backend_info(self) -> BackendInfo:
@@ -164,34 +176,22 @@ class _AerBaseBackend(Backend):
         self,
         arch: Architecture,
         optimisation_level: int = 2,
-        placement_options: Optional[dict[str, Any]] = None,
+        timeout: int = 300,
+        allow_symbolic: bool = False,
     ) -> BasePass:
-        assert optimisation_level in range(3)
-        if placement_options is not None:
-            noise_aware_placement = NoiseAwarePlacement(
-                arch,
-                self._backend_info.averaged_node_gate_errors,  # type: ignore
-                self._backend_info.averaged_edge_gate_errors,  # type: ignore
-                self._backend_info.averaged_readout_errors,  # type: ignore
-                **placement_options,
-            )
+        assert optimisation_level in range(4)
+        arch_specific_passes = [
+            AutoRebase({OpType.CX, OpType.TK1}),
+        ]
+        if allow_symbolic:
+            arch_specific_passes.append(DefaultMappingPass(arch))
         else:
-            noise_aware_placement = NoiseAwarePlacement(
-                arch,
-                self._backend_info.averaged_node_gate_errors,  # type: ignore
-                self._backend_info.averaged_edge_gate_errors,  # type: ignore
-                self._backend_info.averaged_readout_errors,  # type: ignore
+            arch_specific_passes.append(
+                CustomPassMap(
+                    _gen_lightsabre_transformation(arch), label="lightsabrepass"
+                )
             )
 
-        arch_specific_passes = [
-            CXMappingPass(
-                arch,
-                noise_aware_placement,
-                directed_cx=True,
-                delay_measures=False,
-            ),
-            NaivePlacementPass(arch),
-        ]
         if optimisation_level == 0:
             return SequencePass(
                 [
@@ -199,7 +199,7 @@ class _AerBaseBackend(Backend):
                     self.rebase_pass(),
                     *arch_specific_passes,
                     self.rebase_pass(),
-                ]
+                ],
             )
         if optimisation_level == 1:
             return SequencePass(
@@ -208,63 +208,216 @@ class _AerBaseBackend(Backend):
                     SynthesiseTket(),
                     *arch_specific_passes,
                     SynthesiseTket(),
-                ]
+                ],
+            )
+        if optimisation_level == 2:  # noqa: PLR2004
+            return SequencePass(
+                [
+                    DecomposeBoxes(),
+                    FullPeepholeOptimise(),
+                    *arch_specific_passes,
+                    CliffordSimp(False),
+                    SynthesiseTket(),
+                ],
             )
         return SequencePass(
             [
                 DecomposeBoxes(),
-                FullPeepholeOptimise(),
+                RemoveBarriers(),
+                AutoRebase(
+                    {
+                        OpType.Z,
+                        OpType.X,
+                        OpType.Y,
+                        OpType.S,
+                        OpType.Sdg,
+                        OpType.V,
+                        OpType.Vdg,
+                        OpType.H,
+                        OpType.CX,
+                        OpType.CY,
+                        OpType.CZ,
+                        OpType.SWAP,
+                        OpType.Rz,
+                        OpType.Rx,
+                        OpType.Ry,
+                        OpType.T,
+                        OpType.Tdg,
+                        OpType.ZZMax,
+                        OpType.ZZPhase,
+                        OpType.XXPhase,
+                        OpType.YYPhase,
+                        OpType.PhasedX,
+                    }
+                ),
+                GreedyPauliSimp(thread_timeout=timeout, only_reduce=True, trials=10),
                 *arch_specific_passes,
-                CliffordSimp(False),
+                self.rebase_pass(),
                 SynthesiseTket(),
-            ]
+            ],
         )
 
     def _arch_independent_default_compilation_pass(
-        self, optimisation_level: int = 2
+        self,
+        optimisation_level: int = 2,
+        timeout: int = 300,
     ) -> BasePass:
-        assert optimisation_level in range(3)
+        assert optimisation_level in range(4)
         if optimisation_level == 0:
             return SequencePass([DecomposeBoxes(), self.rebase_pass()])
         if optimisation_level == 1:
             return SequencePass([DecomposeBoxes(), SynthesiseTket()])
-        return SequencePass([DecomposeBoxes(), FullPeepholeOptimise()])
+        if optimisation_level == 2:  # noqa: PLR2004
+            return SequencePass([DecomposeBoxes(), FullPeepholeOptimise()])
+        return SequencePass(
+            [
+                DecomposeBoxes(),
+                RemoveBarriers(),
+                AutoRebase(
+                    {
+                        OpType.Z,
+                        OpType.X,
+                        OpType.Y,
+                        OpType.S,
+                        OpType.Sdg,
+                        OpType.V,
+                        OpType.Vdg,
+                        OpType.H,
+                        OpType.CX,
+                        OpType.CY,
+                        OpType.CZ,
+                        OpType.SWAP,
+                        OpType.Rz,
+                        OpType.Rx,
+                        OpType.Ry,
+                        OpType.T,
+                        OpType.Tdg,
+                        OpType.ZZMax,
+                        OpType.ZZPhase,
+                        OpType.XXPhase,
+                        OpType.YYPhase,
+                        OpType.PhasedX,
+                    }
+                ),
+                GreedyPauliSimp(thread_timeout=timeout, only_reduce=True, trials=10),
+                self.rebase_pass(),
+                SynthesiseTket(),
+            ],
+        )
 
     def default_compilation_pass(
         self,
         optimisation_level: int = 2,
-        placement_options: Optional[dict[str, Any]] = None,
+        timeout: int = 300,
+        allow_symbolic: bool = False,
     ) -> BasePass:
         """
-        See documentation for :py:meth:`IBMQBackend.default_compilation_pass`.
+        See documentation for :py:meth:`~.IBMQBackend.default_compilation_pass`.
         """
         arch = self._backend_info.architecture
-        if (
-            self._has_arch
-            and arch.coupling  # type: ignore
-            and self._backend_info.get_misc("characterisation")
-        ):
+        if self._has_arch and arch.coupling:  # type: ignore
             return self._arch_dependent_default_compilation_pass(
-                arch, optimisation_level, placement_options=placement_options  # type: ignore
+                arch,  # type: ignore
+                optimisation_level,
+                timeout,
+                allow_symbolic=allow_symbolic,
             )
+        return self._arch_independent_default_compilation_pass(
+            optimisation_level, timeout
+        )
 
-        return self._arch_independent_default_compilation_pass(optimisation_level)
+    def get_compiled_circuit(
+        self,
+        circuit: Circuit,
+        optimisation_level: int = 2,
+        timeout: int = 300,
+        allow_symbolic: bool = False,
+    ) -> Circuit:
+        """
+        Return a single circuit compiled with :py:meth:`default_compilation_pass`.
 
-    def process_circuits(
+        :param optimisation_level: Allows values of 0, 1, 2 or 3, with higher values
+            prompting more computationally heavy optimising compilation that
+            can lead to reduced gate count in circuits.
+        :param timeout: Only valid for optimisation level 3, gives a maximum time
+            for running a single thread of the pass :py:meth:`~pytket.passes.GreedyPauliSimp`. Increase for
+            optimising larger circuits.
+        :param allow_symbolic: replaces the lightsabre routing with the tket routing to allow symbolic
+            parameters in the circuit
+
+        :return: An optimised quantum circuit
+        """
+        return_circuit = circuit.copy()
+        if optimisation_level == 3 and circuit.n_gates_of_type(OpType.Barrier) > 0:  # noqa: PLR2004
+            warnings.warn(  # noqa: B028
+                "Barrier operations in this circuit will be removed when using "
+                "optimisation level 3."
+            )
+        self.default_compilation_pass(
+            optimisation_level, timeout, allow_symbolic=allow_symbolic
+        ).apply(return_circuit)
+        return return_circuit
+
+    def get_compiled_circuits(
         self,
         circuits: Sequence[Circuit],
-        n_shots: None | int | Sequence[Optional[int]] = None,
+        optimisation_level: int = 2,
+        timeout: int = 300,
+        allow_symbolic: bool = False,
+    ) -> list[Circuit]:
+        """Compile a sequence of circuits with :py:meth:`default_compilation_pass`
+        and return the list of compiled circuits (does not act in place).
+
+        As well as applying a degree of optimisation (controlled by the
+        ``optimisation_level`` parameter), this method tries to ensure that the circuits
+        can be run on the backend (i.e. successfully passed to
+        :py:meth:`process_circuits`), for example by rebasing to the supported gate set,
+        or routing to match the connectivity of the device. However, this is not always
+        possible, for example if the circuit contains classical operations that are not
+        supported by the backend. You may use :py:meth:`valid_circuit` to check whether
+        the circuit meets the backend's requirements after compilation. This validity
+        check is included in :py:meth:`process_circuits` by default, before any circuits
+        are submitted to the backend.
+
+        If the validity check fails, you can obtain more information about the failure
+        by iterating through the predicates in the ``required_predicates`` property of the
+        backend, and running the :py:meth:`~pytket.predicates.Predicate.verify` method on each in turn with your
+        circuit.
+
+        :param circuits: The circuits to compile.
+        :param optimisation_level: The level of optimisation to perform during
+            compilation. See :py:meth:`default_compilation_pass` for a description of
+            the different levels (0, 1, 2 or 3). Defaults to 2.
+        :param timeout: Only valid for optimisation level 3, gives a maximum time
+            for running a single thread of the pass :py:meth:`~pytket.passes.GreedyPauliSimp`. Increase for
+            optimising larger circuits.
+        :param allow_symbolic: replaces the lightsabre routing with the tket routing to allow symbolic
+            parameters in the circuit
+
+        :return: Compiled circuits.
+        """
+        return [
+            self.get_compiled_circuit(
+                c, optimisation_level, timeout, allow_symbolic=allow_symbolic
+            )
+            for c in circuits
+        ]
+
+    def process_circuits(  # noqa: PLR0912
+        self,
+        circuits: Sequence[Circuit],
+        n_shots: None | int | Sequence[int | None] = None,
         valid_check: bool = True,
         **kwargs: KwargTypes,
     ) -> list[ResultHandle]:
         """
-        See :py:meth:`pytket.backends.Backend.process_circuits`.
-        Supported kwargs: `seed`, `postprocess`.
+        See :py:meth:`pytket.backends.backend.Backend.process_circuits`.
+        Supported kwargs: ``seed``, ``postprocess``.
         """
         postprocess = kwargs.get("postprocess", False)
 
         circuits = list(circuits)
-        n_shots_list = Backend._get_n_shots_as_list(
+        n_shots_list = Backend._get_n_shots_as_list(  # noqa: SLF001
             n_shots,
             len(circuits),
             optional=True,
@@ -276,18 +429,20 @@ class _AerBaseBackend(Backend):
         if hasattr(self, "_crosstalk_params") and self._crosstalk_params is not None:
             noisy_circuits = []
             for c in circuits:
-                noisy_circ_builder = NoisyCircuitBuilder(c, self._crosstalk_params)
+                noisy_circ_builder = _NoisyCircuitBuilder(c, self._crosstalk_params)
                 noisy_circ_builder.build()
                 noisy_circuits.append(noisy_circ_builder.get_circuit())
             circuits = noisy_circuits
 
-        handle_list: list[Optional[ResultHandle]] = [None] * len(circuits)
+        handle_list: list[ResultHandle | None] = [None] * len(circuits)
         seed = kwargs.get("seed")
         circuit_batches, batch_order = _batch_circuits(circuits, n_shots_list)
 
         replace_implicit_swaps = self.supports_state or self.supports_unitary
 
-        for (n_shots, batch), indices in zip(circuit_batches, batch_order):
+        for (n_shots, batch), indices in zip(  # noqa: PLR1704
+            circuit_batches, batch_order, strict=False
+        ):
             qcs, ppcirc_strs, tkc_qubits_count = [], [], []
             for tkc in batch:
                 if postprocess:
@@ -296,7 +451,7 @@ class _AerBaseBackend(Backend):
                 else:
                     c0, ppcirc_rep = tkc, None
 
-                qc = tk_to_qiskit(c0, replace_implicit_swaps)
+                qc = tk_to_qiskit(c0, replace_implicit_swaps, perm_warning=False)
 
                 if self.supports_state:
                     qc.save_state()
@@ -312,7 +467,7 @@ class _AerBaseBackend(Backend):
                 ppcirc_strs.append(json.dumps(ppcirc_rep))
 
             if self._needs_transpile:
-                qcs = transpile(qcs, self._qiskit_backend)
+                qcs = transpile(qcs, self._qiskit_backend, optimization_level=1)
 
             job = self._qiskit_backend.run(
                 qcs,
@@ -327,14 +482,15 @@ class _AerBaseBackend(Backend):
             for i, ind in enumerate(indices):
                 handle = ResultHandle(jobid, i, tkc_qubits_count[i], ppcirc_strs[i])
                 handle_list[ind] = handle
+                self._circuit_data[(jobid, i)] = (tkc_qubits_count[i], ppcirc_strs[i])
                 self._cache[handle] = {"job": job}
-        return cast(list[ResultHandle], handle_list)
+        return cast("list[ResultHandle]", handle_list)
 
     def cancel(self, handle: ResultHandle) -> None:
         job: AerJob = self._cache[handle]["job"]
         cancelled = job.cancel()
         if not cancelled:
-            warning(f"Unable to cancel job {cast(str, handle[0])}")
+            warning(f"Unable to cancel job {cast('str', handle[0])}")  # noqa: G004, LOG015
 
     def circuit_status(self, handle: ResultHandle) -> CircuitStatus:
         self._check_handle_type(handle)
@@ -346,11 +502,11 @@ class _AerBaseBackend(Backend):
         try:
             return super().get_result(handle)
         except CircuitNotRunError:
-            jobid, _, qubit_n, ppc = handle
+            jobid = handle[0]
             try:
                 job: AerJob = self._cache[handle]["job"]
             except KeyError:
-                raise CircuitNotRunError(handle)
+                raise CircuitNotRunError(handle)  # noqa: B904
 
             res = job.result()
             backresults = qiskit_result_to_backendresult(
@@ -362,11 +518,12 @@ class _AerBaseBackend(Backend):
                 include_density_matrix=self._supports_density_matrix,
             )
             for circ_index, backres in enumerate(backresults):
-                self._cache[ResultHandle(jobid, circ_index, qubit_n, ppc)][
-                    "result"
-                ] = backres
+                qubit_n, ppc = self._circuit_data[(jobid, circ_index)]
+                self._cache[ResultHandle(jobid, circ_index, qubit_n, ppc)]["result"] = (
+                    backres
+                )
 
-            return cast(BackendResult, self._cache[handle]["result"])
+            return cast("BackendResult", self._cache[handle]["result"])
 
     def _snapshot_expectation_value(
         self,
@@ -379,16 +536,19 @@ class _AerBaseBackend(Backend):
 
         circ_qbs = circuit.qubits
         q_indices = (_default_q_index(q) for q in circ_qbs)
-        if not all(q_ind == i for q_ind, i in zip(q_indices, range(len(circ_qbs)))):
+        if not all(
+            q_ind == i
+            for q_ind, i in zip(q_indices, range(len(circ_qbs)), strict=False)
+        ):
             raise ValueError(
-                "Circuit must act on default register Qubits, contiguously from 0"
+                "Circuit must act on default register Qubits, contiguously from 0"  # noqa: ISC003
                 + f" onwards. Circuit qubits were: {circ_qbs}"
             )
         qc = tk_to_qiskit(circuit)
         qc.save_expectation_value(hamiltonian, qc.qubits, "snap")
         job = self._qiskit_backend.run(qc)
         return cast(
-            complex,
+            "complex",
             job.result().data(qc)["snap"],
         )
 
@@ -454,25 +614,25 @@ class NoiseModelCharacterisation:
     """Class to hold information from the processing of the noise model"""
 
     architecture: Architecture
-    node_errors: Optional[dict[Node, dict[OpType, float]]] = None
-    edge_errors: Optional[dict[tuple[Node, Node], dict[OpType, float]]] = None
-    readout_errors: Optional[dict[Node, list[list[float]]]] = None
-    averaged_node_errors: Optional[dict[Node, float]] = None
-    averaged_edge_errors: Optional[dict[tuple[Node, Node], float]] = None
-    averaged_readout_errors: Optional[dict[Node, float]] = None
-    generic_q_errors: Optional[dict[str, Any]] = None
+    node_errors: dict[Node, dict[OpType, float]] | None = None
+    edge_errors: dict[tuple[Node, Node], dict[OpType, float]] | None = None
+    readout_errors: dict[Node, list[list[float]]] | None = None
+    averaged_node_errors: dict[Node, float] | None = None
+    averaged_edge_errors: dict[tuple[Node, Node], float] | None = None
+    averaged_readout_errors: dict[Node, float] | None = None
+    generic_q_errors: dict[str, Any] | None = None
 
 
 def _map_trivial_noise_model_to_none(
-    noise_model: Optional[NoiseModel],
-) -> Optional[NoiseModel]:
+    noise_model: NoiseModel | None,
+) -> NoiseModel | None:
     if noise_model and all(value == [] for value in noise_model.to_dict().values()):
         return None
     return noise_model
 
 
 def _get_characterisation_of_noise_model(
-    noise_model: Optional[NoiseModel], gate_set: set[OpType]
+    noise_model: NoiseModel | None, gate_set: set[OpType]
 ) -> NoiseModelCharacterisation:
     if noise_model is None:
         return NoiseModelCharacterisation(architecture=Architecture([]))
@@ -488,7 +648,7 @@ class AerBackend(_AerBaseBackend):
         https://qiskit.github.io/qiskit-aer/stubs/qiskit_aer.AerSimulator.html
         for available values. Defaults to "automatic".
     :param crosstalk_params: Apply crosstalk noise simulation to the circuits before
-        execution. `noise_model` will be overwritten if this is given. Default to None.
+        execution. ``noise_model`` will be overwritten if this is given. Default to None.
     :param n_qubits: The maximum number of qubits supported by the backend.
     """
 
@@ -501,7 +661,7 @@ class AerBackend(_AerBaseBackend):
     _memory: bool = True
 
     _qiskit_backend_name: str = "aer_simulator"
-    _allowed_special_gates: set[OpType] = {
+    _allowed_special_gates: set[OpType] = {  # noqa: RUF012
         OpType.Measure,
         OpType.Barrier,
         OpType.Reset,
@@ -510,9 +670,9 @@ class AerBackend(_AerBaseBackend):
 
     def __init__(
         self,
-        noise_model: Optional[NoiseModel] = None,
+        noise_model: NoiseModel | None = None,
         simulation_method: str = "automatic",
-        crosstalk_params: Optional[CrosstalkParams] = None,
+        crosstalk_params: CrosstalkParams | None = None,
         n_qubits: int = 40,
     ):
         super().__init__()
@@ -565,6 +725,7 @@ class AerBackend(_AerBaseBackend):
         self._required_predicates = [
             NoSymbolsPredicate(),
             GateSetPredicate(self._backend_info.gate_set),
+            MaxNQubitsPredicate(n_qubits),
         ]
         if self._crosstalk_params is not None:
             self._required_predicates.extend(
@@ -594,7 +755,7 @@ class AerStateBackend(_AerBaseBackend):
     _supports_expectation: bool = True
     _expectation_allows_nonhermitian: bool = False
 
-    _noise_model: Optional[NoiseModel] = None
+    _noise_model: NoiseModel | None = None
     _memory: bool = False
 
     _qiskit_backend_name: str = "aer_simulator_statevector"
@@ -631,7 +792,7 @@ class AerUnitaryBackend(_AerBaseBackend):
     _supports_unitary: bool = True
 
     _memory: bool = False
-    _noise_model: Optional[NoiseModel] = None
+    _noise_model: NoiseModel | None = None
     _needs_transpile: bool = True
 
     _qiskit_backend_name: str = "aer_simulator_unitary"
@@ -659,20 +820,20 @@ class AerDensityMatrixBackend(_AerBaseBackend):
     """
     Backend for running simulations on the Qiskit Aer density matrix simulator.
 
-    :param noise_model: Noise model to apply during simulation. Defaults to None.
+    :param noise_model: Noise model to apply during simulation. Defaults to ``None``.
     :param n_qubits: The maximum number of qubits supported by the backend.
     """
 
     _supports_density_matrix: bool = True
     _supports_state: bool = False
     _memory: bool = False
-    _noise_model: Optional[NoiseModel] = None
+    _noise_model: NoiseModel | None = None
     _needs_transpile: bool = True
     _supports_expectation: bool = True
 
     _qiskit_backend_name: str = "aer_simulator_density_matrix"
 
-    _allowed_special_gates: set[OpType] = {
+    _allowed_special_gates: set[OpType] = {  # noqa: RUF012
         OpType.Measure,
         OpType.Barrier,
         OpType.Reset,
@@ -681,7 +842,7 @@ class AerDensityMatrixBackend(_AerBaseBackend):
 
     def __init__(
         self,
-        noise_model: Optional[NoiseModel] = None,
+        noise_model: NoiseModel | None = None,
         n_qubits: int = 40,
     ) -> None:
         super().__init__()
@@ -774,16 +935,15 @@ def _process_noise_model(
                 )
             elif error["type"] == "roerror":
                 readout_errors[Node(q)] = cast(
-                    list[list[float]], error["probabilities"]
+                    "list[list[float]]", error["probabilities"]
                 )
             else:
                 raise RuntimeWarning("Error type not 'qerror' or 'roerror'.")
-        elif len(qubits) == 2:
+        elif len(qubits) == 2:  # noqa: PLR2004
             # note that if multiple multi-qubit errors are added to the CX gate,
             #  the resulting noise channel is composed and reflected in probabilities
             [q0, q1] = qubits
             optype = _gate_str_2_optype[name]
-            link_errors.update()
             link_errors[(Node(q0), Node(q1))].update({optype: float(1 - gate_fid)})
             qubits_with_link_errors.add(q0)
             qubits_with_link_errors.add(q1)
@@ -803,7 +963,7 @@ def _process_noise_model(
             coupling_map.append([lq, q])
 
     for pair in itertools.permutations(free_qubits, 2):
-        coupling_map.append(pair)
+        coupling_map.append(pair)  # noqa: PERF402
 
     generic_q_errors = {
         "GenericOneQubitQErrors": [
@@ -850,7 +1010,7 @@ def _qubitpauliop_to_sparsepauliop(
     operator: QubitPauliOperator, n_qubits: int
 ) -> SparsePauliOp:
     strings, coeffs = [], []
-    for term, coeff in operator._dict.items():
+    for term, coeff in operator._dict.items():  # noqa: SLF001
         termmap = term.map
         strings.append(
             "".join(
