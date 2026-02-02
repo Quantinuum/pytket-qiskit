@@ -4,6 +4,11 @@
 
 # Changelog
 
+## 0.77.0 (January 2026)
+
+- Rename mcz to ccz to match qiskit name
+- Update minimum qiskit version to 2.3.
+
 ## 0.76.0 (January 2026)
 
 - Update documentation
