@@ -1417,6 +1417,7 @@ def test_bit_ref_circuit() -> None:
     assert b_creg.size == 1
 
 
+@pytest.mark.xfail(reason="https://github.com/Quantinuum/pytket-qiskit/issues/539")
 def test_round_trip_with_qiskit_transpilation() -> None:
     circ = Circuit(4, 1)
     circ.H(0).Measure(0, 0)
