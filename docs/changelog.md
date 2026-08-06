@@ -4,6 +4,10 @@
 
 # Changelog
 
+## Unreleased
+
+- Make `qiskit_aer` an optional dependency.
+
 ## 0.77.0 (January 2026)
 
 - Rename mcz to ccz to match qiskit name
