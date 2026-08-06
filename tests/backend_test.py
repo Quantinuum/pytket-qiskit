@@ -22,10 +22,15 @@ import numpy as np
 import pytest
 from hypothesis import given, strategies
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister  # type: ignore
-from qiskit_aer import Aer  # type: ignore
-from qiskit_aer.noise import ReadoutError  # type: ignore
-from qiskit_aer.noise.errors import depolarizing_error, pauli_error  # type: ignore
-from qiskit_aer.noise.noise_model import NoiseModel  # type: ignore
+
+from pytket.extensions.qiskit import have_aer
+
+if have_aer():
+    from qiskit_aer import Aer  # type: ignore
+    from qiskit_aer.noise import ReadoutError  # type: ignore
+    from qiskit_aer.noise.errors import depolarizing_error, pauli_error  # type: ignore
+    from qiskit_aer.noise.noise_model import NoiseModel  # type: ignore
+
 from qiskit_ibm_runtime import QiskitRuntimeService  # type: ignore
 
 from pytket.architecture import Architecture, FullyConnected
@@ -50,16 +55,20 @@ from pytket.circuit import (
     reg_eq,
 )
 from pytket.extensions.qiskit import (
-    AerBackend,
-    AerDensityMatrixBackend,
-    AerStateBackend,
-    AerUnitaryBackend,
     IBMQBackend,
-    IBMQEmulatorBackend,
     process_characterisation,
     qiskit_to_tk,
     tk_to_qiskit,
 )
+
+if have_aer():
+    from pytket.extensions.qiskit import (
+        AerBackend,
+        AerDensityMatrixBackend,
+        AerStateBackend,
+        AerUnitaryBackend,
+        IBMQEmulatorBackend,
+    )
 from pytket.extensions.qiskit.backends.crosstalk_model import (
     CrosstalkParams,
     _FractionalUnitary,
@@ -119,6 +128,7 @@ def get_test_circuit(measure: bool) -> QuantumCircuit:
     return qc
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_statevector() -> None:
     c = circuit_gen()
     b = AerStateBackend()
@@ -129,6 +139,7 @@ def test_statevector() -> None:
     assert np.allclose(state1, state * 1j, atol=1e-10)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_statevector_sim_with_permutation() -> None:
     # https://github.com/Quantinuum/pytket-qiskit/issues/35
     b = AerStateBackend()
@@ -146,6 +157,7 @@ def test_statevector_sim_with_permutation() -> None:
     assert np.allclose(sv, sv1, atol=1e-10)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_sim() -> None:
     c = circuit_gen(True)
     b = AerBackend()
@@ -187,6 +199,7 @@ def test_symbolic_ii() -> None:
     assert b._uses_lightsabre  # noqa: SLF001
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_measures() -> None:
     n_qbs = 12
     c = Circuit(n_qbs, n_qbs)
@@ -208,6 +221,7 @@ def test_measures() -> None:
 
 
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_noise(brussels_backend: IBMQBackend) -> None:
     noise_model = NoiseModel.from_backend(brussels_backend._backend)  # noqa: SLF001
     n_qbs = 5
@@ -262,6 +276,7 @@ def test_process_characterisation(brussels_backend: IBMQBackend) -> None:
     assert len(link_errors) == 352
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_process_characterisation_no_noise_model() -> None:
     my_noise_model = NoiseModel()
     back = AerBackend(my_noise_model)
@@ -272,6 +287,7 @@ def test_process_characterisation_no_noise_model() -> None:
     assert back.valid_circuit(c)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_process_characterisation_incomplete_noise_model() -> None:
     my_noise_model = NoiseModel()
 
@@ -309,6 +325,7 @@ def test_process_characterisation_incomplete_noise_model() -> None:
     }
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_circuit_compilation_complete_noise_model() -> None:
     my_noise_model = NoiseModel()
     my_noise_model.add_quantum_error(depolarizing_error(0.6, 2), ["cx"], [0, 1])
@@ -329,6 +346,7 @@ def test_circuit_compilation_complete_noise_model() -> None:
     assert back.valid_circuit(c)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_process_characterisation_complete_noise_model() -> None:
     my_noise_model = NoiseModel()
 
@@ -395,6 +413,7 @@ def test_process_characterisation_complete_noise_model() -> None:
     ]
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_process_model() -> None:
     noise_model = NoiseModel()
     # add readout error to qubits 0, 1, 2
@@ -425,6 +444,7 @@ def test_process_model() -> None:
     assert (nodes[7], nodes[8]) in edge_gate_errors
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_cancellation_aer() -> None:
     b = AerBackend()
     c = circuit_gen(True)
@@ -500,6 +520,7 @@ def test_nshots_batching(brussels_backend: IBMQBackend) -> None:
 
 @pytest.mark.flaky(reruns=3, reruns_delay=10)
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_nshots(
     brussels_emulator_backend: IBMQEmulatorBackend,
 ) -> None:
@@ -512,6 +533,7 @@ def test_nshots(
         assert [sum(r.get_counts().values()) for r in results] == n_shots
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_pauli_statevector() -> None:
     c = Circuit(2)
     c.Rz(0.5, 0)
@@ -523,6 +545,7 @@ def test_pauli_statevector() -> None:
     assert get_pauli_expectation_value(c, zi, b) == -1
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_pauli_sim() -> None:
     c = Circuit(2, 2)
     c.Rz(0.5, 0)
@@ -553,6 +576,7 @@ def test_default_pass(brussels_backend: IBMQBackend) -> None:
 
 
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_aer_default_pass(brussels_backend: IBMQBackend) -> None:
     noise_model = NoiseModel.from_backend(brussels_backend._backend)  # noqa: SLF001
     for nm in [None, noise_model]:
@@ -571,6 +595,7 @@ def test_aer_default_pass(brussels_backend: IBMQBackend) -> None:
                 assert pred.verify(c)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_routing_measurements() -> None:
     qc = get_test_circuit(True)
     physical_c = qiskit_to_tk(qc)
@@ -600,6 +625,7 @@ def test_routing_no_cx() -> None:
     assert len(circ.get_commands()) == 4
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_counts() -> None:
     qc = get_test_circuit(True)
     circ = qiskit_to_tk(qc)
@@ -608,6 +634,7 @@ def test_counts() -> None:
     assert counts == {(1, 0, 1, 1, 0): 10}
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_ilo() -> None:
     b = AerBackend()
     bs = AerStateBackend()
@@ -634,6 +661,7 @@ def test_ilo() -> None:
     assert res.get_counts(basis=BasisOrder.dlo) == {(1, 0): 2}
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_ubox() -> None:
     # https://github.com/Quantinuum/pytket-extensions/issues/342
     u = np.array(
@@ -649,6 +677,7 @@ def test_ubox() -> None:
     assert np.allclose(u, u1)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_swaps_basisorder() -> None:
     # Check that implicit swaps can be corrected irrespective of BasisOrder
     b = AerStateBackend()
@@ -703,6 +732,7 @@ def test_swaps_basisorder() -> None:
     assert np.allclose(u_dlo, correct_dlo)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_pauli() -> None:
     for b in [AerBackend(), AerStateBackend()]:
         c = Circuit(2)
@@ -714,6 +744,7 @@ def test_pauli() -> None:
         assert cmath.isclose(get_pauli_expectation_value(c, zi, b), -1)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_operator() -> None:
     for b in [AerBackend(), AerStateBackend()]:
         c = circuit_gen()
@@ -727,6 +758,7 @@ def test_operator() -> None:
 
 # TKET-1432 this was either too slow or consumed too much memory when bugged
 @pytest.mark.flaky(reruns=3, reruns_delay=10)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_expectation_bug() -> None:
     backend = AerStateBackend()
     # backend.compile_circuit(circuit)
@@ -737,6 +769,7 @@ def test_expectation_bug() -> None:
     assert np.isclose(exp, 1.4325392)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_aer_result_handle() -> None:
     c = Circuit(2, 2).H(0).CX(0, 1).measure_all()
 
@@ -768,6 +801,7 @@ def test_aer_result_handle() -> None:
     )
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_aerstate_result_handle() -> None:
     c = circuit_gen()
     b1 = AerStateBackend()
@@ -785,6 +819,7 @@ def test_aerstate_result_handle() -> None:
     )
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_cache() -> None:
     b = AerBackend()
     c = circuit_gen()
@@ -802,6 +837,7 @@ def test_cache() -> None:
     assert not b._cache  # noqa: SLF001
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_mixed_circuit() -> None:
     c = Circuit()
     qr = c.add_q_register("q", 2)
@@ -819,6 +855,7 @@ def test_mixed_circuit() -> None:
 
 
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_aer_placed_expectation(brussels_backend: IBMQBackend) -> None:
     # bug TKET-695
     n_qbs = 3
@@ -851,6 +888,7 @@ def test_aer_placed_expectation(brussels_backend: IBMQBackend) -> None:
         assert "default register Qubits" in str(errorinfoCirc.value)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_operator_expectation_value() -> None:
     c = Circuit(2).X(0).V(0).V(1).S(0).S(1).H(0).H(1).S(0).S(1)
     op = QubitPauliOperator(
@@ -867,6 +905,7 @@ def test_operator_expectation_value() -> None:
 
 @pytest.mark.flaky(reruns=3, reruns_delay=10)
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_ibmq_emulator(
     brussels_emulator_backend: IBMQEmulatorBackend,
 ) -> None:
@@ -899,7 +938,9 @@ def test_ibmq_emulator(
     brussels_emulator_backend.rebase_pass().apply(copy_circ)
     assert brussels_emulator_backend.required_predicates[1].verify(copy_circ)
     circ = brussels_emulator_backend.get_compiled_circuit(circ)
-    b_noi = AerBackend(noise_model=brussels_emulator_backend._noise_model)  # noqa: SLF001
+    b_noi = AerBackend(
+        noise_model=brussels_emulator_backend._noise_model
+    )  # noqa: SLF001
     emu_counts = brussels_emulator_backend.run_circuit(
         circ, n_shots=10, seed=10
     ).get_counts()
@@ -908,6 +949,7 @@ def test_ibmq_emulator(
     assert sum(emu_counts.values()) == sum(aer_counts.values())
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 @given(
     n_shots=strategies.integers(min_value=1, max_value=10),
     n_bits=strategies.integers(min_value=0, max_value=10),
@@ -936,6 +978,7 @@ def test_shots_bits_edgecases(n_shots: int, n_bits: int) -> None:
     assert res.get_counts() == correct_counts
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_simulation_method() -> None:
     state_backends = [AerBackend(), AerBackend(simulation_method="statevector")]
     stabilizer_backend = AerBackend(simulation_method="stabilizer")
@@ -961,6 +1004,7 @@ def test_simulation_method() -> None:
         )
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_aer_expanded_gates() -> None:
     c = Circuit(3).CX(0, 1)
     c.add_gate(OpType.ZZPhase, 0.1, [0, 1])
@@ -1077,6 +1121,7 @@ def _verify_single_q_rebase(
     return compare_unitaries(u_before, u_after)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_rebase_phase() -> None:
     backend = AerUnitaryBackend()
     for a in [0.6, 0, 1, 2, 3]:
@@ -1108,6 +1153,7 @@ def test_postprocess() -> None:
 
 @pytest.mark.flaky(reruns=3, reruns_delay=10)
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_postprocess_emu(brussels_emulator_backend: IBMQEmulatorBackend) -> None:
     assert brussels_emulator_backend.supports_contextual_optimisation
     c = Circuit(2, 2)
@@ -1136,6 +1182,7 @@ def test_available_devices(qiskit_runtime_service: QiskitRuntimeService) -> None
 
 @pytest.mark.flaky(reruns=3, reruns_delay=10)
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_backendinfo_serialization1(
     brussels_emulator_backend: IBMQEmulatorBackend,
 ) -> None:
@@ -1146,6 +1193,7 @@ def test_backendinfo_serialization1(
     assert backend_info_json == backend_info_json1
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_backendinfo_serialization2() -> None:
     # https://github.com/Quantinuum/tket/issues/192
     my_noise_model = NoiseModel()
@@ -1178,6 +1226,7 @@ def test_backendinfo_serialization2() -> None:
     assert backend_info_json == backend_info_json1
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_sim_qubit_order() -> None:
     # https://github.com/Quantinuum/pytket-qiskit/issues/54
     backend = AerStateBackend()
@@ -1191,6 +1240,7 @@ def test_sim_qubit_order() -> None:
 
 @pytest.mark.flaky(reruns=3, reruns_delay=10)
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_required_predicates(
     brussels_emulator_backend: IBMQEmulatorBackend,
 ) -> None:
@@ -1237,6 +1287,7 @@ def test_ecr_gate_compilation(ibm_aachen_backend: IBMQBackend) -> None:
         assert ibm_aachen_backend.valid_circuit(compiled_circ)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_crosstalk_noise_model() -> None:
     circ = Circuit(3).X(0).CX(0, 1).CX(1, 2).measure_all()
     zz_crosstalks = {
@@ -1339,6 +1390,7 @@ def _get_qiskit_statevector(qc: QuantumCircuit) -> np.ndarray:
 
 # The three tests below and helper function above relate to this issue.
 # https://github.com/Quantinuum/pytket-qiskit/issues/99
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_statevector_simulator_gateset_deterministic() -> None:
     sv_backend = AerStateBackend()
     sv_supported_gates = sv_backend.backend_info.gate_set
@@ -1362,6 +1414,7 @@ def test_statevector_simulator_gateset_deterministic() -> None:
     assert compare_statevectors(tket_statevector, qiskit_statevector)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_statevector_non_deterministic() -> None:
     circ = Circuit(2, 1)
     circ.H(0).H(1)
@@ -1377,6 +1430,7 @@ def test_statevector_non_deterministic() -> None:
     )
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_unitary_backend_transpiles() -> None:
     """regression test for https://github.com/Quantinuum/pytket-qiskit/issues/142"""
     backend = AerUnitaryBackend()
@@ -1399,6 +1453,7 @@ def test_unitary_backend_transpiles() -> None:
     assert np.isclose(u[62:64, 62:64], np.asarray(([0.0, 1.0], [1.0, 0.0]))).all()
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_barriers_in_aer_simulators() -> None:
     """Test for barrier support in aer simulators
     https://github.com/Quantinuum/pytket-qiskit/issues/186"""
@@ -1426,6 +1481,7 @@ def test_barriers_in_aer_simulators() -> None:
 
 
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_ibmq_local_emulator(
     brussels_emulator_backend: IBMQEmulatorBackend,
 ) -> None:
@@ -1440,6 +1496,7 @@ def test_ibmq_local_emulator(
 
 
 # https://github.com/Quantinuum/pytket-qiskit/issues/231
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_noiseless_density_matrix_simulation() -> None:
     density_matrix_backend = AerDensityMatrixBackend()
     assert density_matrix_backend.supports_density_matrix is True
@@ -1479,6 +1536,7 @@ def test_noiseless_density_matrix_simulation() -> None:
 
 
 # https://github.com/Quantinuum/pytket-qiskit/issues/231
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_noisy_density_matrix_simulation() -> None:
     # Test that __init__ works with a very simple noise model
     noise_model = NoiseModel()
@@ -1504,6 +1562,7 @@ def test_noisy_density_matrix_simulation() -> None:
     assert np.trace(noisy_dm**2).real < 0.99
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_mc_gate_on_aer() -> None:
     """Test for cm gates support in aer simulators
     https://github.com/Quantinuum/pytket-qiskit/issues/368"""
@@ -1518,6 +1577,7 @@ def test_mc_gate_on_aer() -> None:
     assert r.get_counts() == Counter({(1, 1, 1): 10})
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_optimisation_level_3_compilation() -> None:
     b = AerBackend()
     a = Architecture([(0, 1), (0, 2), (0, 3), (3, 4), (4, 5), (4, 6), (4, 7)])
@@ -1557,6 +1617,7 @@ def test_optimisation_level_3_compilation() -> None:
     assert compiled_3_timeout.depth() <= 151
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_optimisation_level_3_serialisation() -> None:
     b = AerBackend()
     a = Architecture([(0, 1), (0, 2), (0, 3), (3, 4), (4, 5), (4, 6), (4, 7)])
@@ -1575,6 +1636,7 @@ def test_optimisation_level_3_serialisation() -> None:
     assert p_dict == passlist.to_dict()
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_process_circuits_n_qubits() -> None:
     # https://github.com/Quantinuum/pytket-qiskit/issues/420
     circs = [Circuit(1).X(0).measure_all(), Circuit(2).X(0).measure_all()]
@@ -1585,6 +1647,7 @@ def test_process_circuits_n_qubits() -> None:
     assert rs[1].get_counts() == Counter({(1, 0): 10})
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_noise_model_relabelling() -> None:
     prob_ro: float = 0.1
     noise_model = NoiseModel()
@@ -1607,6 +1670,7 @@ def test_noise_model_relabelling() -> None:
     assert cu.final_map == {qubit: Node(3)}
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_swap_unitary_compilation() -> None:
     # https://github.com/Quantinuum/pytket-qiskit/issues/485
     c = Circuit(2)

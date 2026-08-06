@@ -17,10 +17,10 @@ import os
 import pytest
 from qiskit_ibm_runtime import QiskitRuntimeService  # type: ignore
 
-from pytket.extensions.qiskit import (
-    IBMQBackend,
-    IBMQEmulatorBackend,
-)
+from pytket.extensions.qiskit import have_aer, IBMQBackend
+
+if have_aer():
+    from pytket.extensions.qiskit import IBMQEmulatorBackend
 
 
 @pytest.fixture(autouse=True, scope="session")

@@ -45,7 +45,15 @@ from qiskit.transpiler import (  # type: ignore
 from qiskit.transpiler.preset_passmanagers.level2 import (  # type: ignore
     level_2_pass_manager,
 )
-from qiskit_aer import Aer  # type: ignore
+from pytket.extensions.qiskit import have_aer
+
+if have_aer():
+    from qiskit_aer import Aer  # type: ignore
+    from pytket.extensions.qiskit.backends import (
+        AerBackend,
+        qiskit_aer_backend,
+    )
+
 from sympy import Symbol
 
 from pytket.circuit import (
@@ -66,10 +74,6 @@ from pytket.circuit import (
     reg_neq,
 )
 from pytket.extensions.qiskit import IBMQBackend, qiskit_to_tk, tk_to_qiskit
-from pytket.extensions.qiskit.backends import (
-    AerBackend,
-    qiskit_aer_backend,
-)
 from pytket.extensions.qiskit.qiskit_convert import _gate_str_2_optype
 from pytket.extensions.qiskit.result_convert import qiskit_result_to_backendresult
 from pytket.extensions.qiskit.tket_pass import TketAutoPass, TketPass
@@ -176,6 +180,7 @@ def get_test_circuit(measure: bool, reset: bool = True) -> QuantumCircuit:
     return qc
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_convert() -> None:
     qc = get_test_circuit(False)
     tkc = qiskit_to_tk(qc)
@@ -196,6 +201,7 @@ def test_convert() -> None:
     assert np.allclose(state0, state1, atol=1e-10)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_measures() -> None:
     qc = get_test_circuit(True)
     backend = qiskit_aer_backend("aer_simulator")
@@ -233,6 +239,7 @@ def test_boxes() -> None:
     assert d == d1
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_Unitary1qBox() -> None:
     c = Circuit(1)
     u = np.asarray([[0, 1], [1, 0]])
@@ -249,6 +256,7 @@ def test_Unitary1qBox() -> None:
     assert np.allclose(u1, u)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_Unitary2qBox() -> None:
     c = Circuit(2)
     u = np.asarray([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
@@ -265,6 +273,7 @@ def test_Unitary2qBox() -> None:
     assert np.allclose(u1, u)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_Unitary3qBox() -> None:
     c = Circuit(3)
     u = np.asarray(
@@ -309,6 +318,7 @@ def test_gates_phase() -> None:
     assert qc == qc_correct
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_tketpass() -> None:
     qc = get_test_circuit(False, False)
     tkpass = FullPeepholeOptimise()
@@ -331,6 +341,7 @@ def test_tketpass() -> None:
 
 @pytest.mark.timeout(None)
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_tketautopass(brussels_backend: IBMQBackend) -> None:
     backends = [
         Aer.get_backend("aer_simulator_statevector"),
@@ -467,6 +478,7 @@ def test_gate_str_2_optype() -> None:
     assert all(_gate_str_2_optype[key] == val for key, val in samples.items())
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_customgate() -> None:
     a = Symbol("a")
     def_circ = Circuit(2)
@@ -497,6 +509,7 @@ def test_customgate() -> None:
     assert compare_statevectors(states[1], states[2])
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_convert_result() -> None:
     # testing fix to register order bug TKET-752
     qr1 = QuantumRegister(1, name="q1")
@@ -645,6 +658,7 @@ def qcirc_to_tcirc(qcirc: QuantumCircuit) -> Circuit:
     return tcirc
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_cnry_conversion() -> None:
     """This is for TKET-991.
     Maintain parallel circuits, check equivalence at each stage.
@@ -938,6 +952,7 @@ def test_state_prep_conversion_array_or_list() -> None:
     assert tkc_2.n_gates_of_type(OpType.StatePreparationBox) == 1
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_state_prep_conversion_with_int() -> None:
     qc = QuantumCircuit(4)
     qc.prepare_state(7, qc.qubits)
@@ -957,6 +972,7 @@ def test_state_prep_conversion_with_int() -> None:
     assert compare_statevectors(tkc_int_sv, sv_int)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_state_prep_conversion_with_str() -> None:
     qc = QuantumCircuit(5)
     qc.initialize("rl+-1")
@@ -981,6 +997,7 @@ def test_state_prep_conversion_with_str() -> None:
     assert compare_statevectors(sv_array, tkc_sv.get_statevector())
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_conversion_to_tket_with_and_without_resets() -> None:
     test_state = 1 / np.sqrt(3) * np.array([1, 1, 0, 0, 0, 0, 1, 0])
     tket_sp_reset = StatePreparationBox(test_state, with_initial_reset=True)
@@ -1108,6 +1125,7 @@ def test_symbolic_param_conv() -> None:
     )
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_implicit_swap_warning() -> None:
     c = Circuit(2).H(0).SWAP(0, 1)
     c.replace_SWAPs()
