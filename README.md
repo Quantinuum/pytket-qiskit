@@ -15,7 +15,7 @@ Some useful links:
 
 ## Getting started
 
-`pytket-qiskit` is compatible with Python versions 3.10 to 3.13 on Linux, MacOS
+`pytket-qiskit` is compatible with Python versions 3.11+ on Linux, MacOS
 and Windows. To install, run:
 
 ```shell
