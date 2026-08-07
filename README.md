@@ -25,6 +25,16 @@ pip install pytket-qiskit
 This will install `pytket` if it isn't already installed, and add new classes
 and methods into the `pytket.extensions` namespace.
 
+To use Aer simulators and IBMQ emulators with pytket-qiskit, install with the
+`aer` option:
+
+```shell
+pip install pytket-qiskit[aer]
+```
+
+However, note that `qiskit_aer` is no longer actively maintained and will not
+be compatible with the most recent Python versions.
+
 ## Bugs, support and feature requests
 
 Please file bugs and feature requests on the Github

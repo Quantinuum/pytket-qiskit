@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from qiskit_aer.backends import AerSimulator  # type: ignore
+from pytket.extensions.qiskit import have_aer, IBMQBackend
 
-from pytket.extensions.qiskit import (
-    AerBackend,
-    AerStateBackend,
-    AerUnitaryBackend,
-    IBMQBackend,
-)
+if have_aer():
+    from qiskit_aer.backends import AerSimulator  # type: ignore
+    from pytket.extensions.qiskit import (
+        AerBackend,
+        AerStateBackend,
+        AerUnitaryBackend,
+    )
 from pytket.passes import BasePass
 from qiskit.converters import circuit_to_dag, dag_to_circuit  # type: ignore
 from qiskit.dagcircuit import DAGCircuit  # type: ignore
@@ -58,7 +59,9 @@ class TketPass(TransformationPass):
         self._pass.apply(circ)
         qc = tk_to_qiskit(circ)
         new_param_lookup = {p._symbol_expr: p for p in qc.parameters}  # noqa: SLF001
-        subs_map = {new_param_lookup[p._symbol_expr]: p for p in old_parameters}  # noqa: SLF001
+        subs_map = {
+            new_param_lookup[p._symbol_expr]: p for p in old_parameters
+        }  # noqa: SLF001
         qc.assign_parameters(subs_map, inplace=True)
         newdag = circuit_to_dag(qc)
         newdag.name = dag.name
@@ -68,11 +71,12 @@ class TketPass(TransformationPass):
 class TketAutoPass(TketPass):
     """The tket compiler to be plugged in to the Qiskit compilation sequence"""
 
-    _aer_backend_map = {  # noqa: RUF012
-        "aer_simulator": AerBackend,
-        "aer_simulator_statevector": AerStateBackend,
-        "aer_simulator_unitary": AerUnitaryBackend,
-    }
+    if have_aer():
+        _aer_backend_map = {  # noqa: RUF012
+            "aer_simulator": AerBackend,
+            "aer_simulator_statevector": AerStateBackend,
+            "aer_simulator_unitary": AerUnitaryBackend,
+        }
 
     def __init__(
         self,
@@ -93,7 +97,7 @@ class TketAutoPass(TketPass):
         :param instance: Instance for the :py:class:`~qiskit_ibm_runtime.QiskitRuntimeService`.
         :param token: Authentication token to use the :py:class:`~qiskit_ibm_runtime.QiskitRuntimeService`.
         """
-        if isinstance(backend, AerSimulator):
+        if have_aer() and isinstance(backend, AerSimulator):
             tk_backend = self._aer_backend_map[backend.name]()
         else:
             tk_backend = IBMQBackend(backend.name, instance=instance, token=token)

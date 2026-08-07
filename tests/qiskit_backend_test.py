@@ -19,16 +19,20 @@ import pytest
 from qiskit import QuantumCircuit  # type: ignore
 from qiskit.primitives import BackendSamplerV2  # type: ignore
 from qiskit.providers import JobStatus  # type: ignore
-from qiskit_aer import Aer  # type: ignore
+
+from pytket.extensions.qiskit import have_aer
+
+if have_aer():
+    from qiskit_aer import Aer  # type: ignore
+    from pytket.extensions.qiskit import (
+        AerBackend,
+        AerStateBackend,
+        AerUnitaryBackend,
+        IBMQEmulatorBackend,
+    )
 
 from pytket.architecture import Architecture, FullyConnected
 from pytket.circuit import Circuit
-from pytket.extensions.qiskit import (
-    AerBackend,
-    AerStateBackend,
-    AerUnitaryBackend,
-    IBMQEmulatorBackend,
-)
 from pytket.extensions.qiskit.tket_backend import TketBackend
 
 from .mock_pytket_backend import MockShotBackend
@@ -48,6 +52,7 @@ def circuit_gen(measure: bool = False) -> QuantumCircuit:
     return qc
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_samples() -> None:
     qc = circuit_gen(True)
     b = AerBackend()
@@ -60,6 +65,7 @@ def test_samples() -> None:
         assert all((r[0] == "1" and r[1] == r[2]) for r in counts)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_maxnqubits() -> None:
     backend = AerBackend(n_qubits=1)
     with pytest.raises(Exception):  # noqa: B017
@@ -69,6 +75,7 @@ def test_maxnqubits() -> None:
         )
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_state() -> None:
     qc = circuit_gen()
     b = AerStateBackend()
@@ -84,6 +91,7 @@ def test_state() -> None:
         assert np.allclose(state, state2)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_unitary() -> None:
     qc = circuit_gen()
     b = AerUnitaryBackend()
@@ -99,6 +107,7 @@ def test_unitary() -> None:
         assert np.allclose(u, u2)
 
 
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_cancel() -> None:
     b = AerBackend()
     tb = TketBackend(b)
@@ -109,6 +118,7 @@ def test_cancel() -> None:
 
 
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
+@pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_qiskit_counts(brussels_emulator_backend: IBMQEmulatorBackend) -> None:
     num_qubits = 2
     qc = QuantumCircuit(num_qubits)

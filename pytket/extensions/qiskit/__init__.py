@@ -14,15 +14,30 @@
 
 # _metadata.py is copied to the folder after installation.
 from ._metadata import __extension_name__, __extension_version__
-from .backends import (
-    AerBackend,
-    AerDensityMatrixBackend,
-    AerStateBackend,
-    AerUnitaryBackend,
-    IBMQBackend,
-    IBMQEmulatorBackend,
-    NoIBMQCredentialsError,
-)
+
+from functools import cache
+
+@cache
+def have_aer() -> bool:
+    try:
+        import qiskit_aer  # type: ignore # noqa # pylint: disable=unused-import
+
+        return True
+    except ImportError:
+        return False
+
+
+from .backends import IBMQBackend, NoIBMQCredentialsError
+
+if have_aer():
+    from .backends import (
+        AerBackend,
+        AerDensityMatrixBackend,
+        AerStateBackend,
+        AerUnitaryBackend,
+        IBMQEmulatorBackend,
+    )
+
 from .backends.config import set_ibmq_config
 from .qiskit_convert import process_characterisation, qiskit_to_tk, tk_to_qiskit
 
