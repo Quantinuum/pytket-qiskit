@@ -17,14 +17,15 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from pytket.extensions.qiskit import have_aer
-
-if have_aer():
+try:
+    import qiskit_aer  # noqa: F401
     from qiskit_aer.noise import NoiseModel  # type: ignore
     from qiskit_aer.noise.errors.standard_errors import (  # type: ignore
         amplitude_damping_error,
         phase_damping_error,
     )
+except ImportError:
+    pass
 
 from scipy.linalg import fractional_matrix_power  # type: ignore
 
