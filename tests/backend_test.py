@@ -1107,7 +1107,7 @@ def _tk1_to_rotations(a: float, b: float, c: float) -> Circuit:
 
 
 def _verify_single_q_rebase(
-    backend: AerUnitaryBackend, a: float, b: float, c: float
+    backend: "AerUnitaryBackend", a: float, b: float, c: float
 ) -> bool:
     """Compare the unitary of a tk1 gate to the unitary of the translated circuit"""
     rotation_circ = _tk1_to_rotations(a, b, c)
