@@ -56,16 +56,16 @@ jobs:
 
   aer-tests:
     name: Unit tests using the Aer simulators
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
-    - uses: actions/checkout@v7
-    - name: Select Python 3.13
-      uses: actions/setup-python@v7
-      with:
-        python-version: '3.13'
-    - name: Install
-      run: pip install -v -e .[aer]
-    - name: Test
-      run: |
-        pip install pytest hypothesis
-        pytest
+      - uses: actions/checkout@v7
+      - name: Select Python 3.13
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install
+        run: pip install -v -e .[aer]
+      - name: Test
+        run: |
+          pip install pytest hypothesis
+          pytest
