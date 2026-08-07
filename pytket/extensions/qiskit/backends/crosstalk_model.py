@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import numpy as np
 
 try:
-    import qiskit_aer  # noqa: F401
+    import qiskit_aer  # type: ignore # noqa: F401
     from qiskit_aer.noise import NoiseModel  # type: ignore
     from qiskit_aer.noise.errors.standard_errors import (  # type: ignore
         amplitude_damping_error,

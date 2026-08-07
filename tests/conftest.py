@@ -54,7 +54,7 @@ def brussels_backend() -> IBMQBackend:
 
 
 try:
-    import qiskit_aer  # noqa: F401
+    import qiskit_aer  # type: ignore # noqa: F401
 
     from pytket.extensions.qiskit import IBMQEmulatorBackend
 
