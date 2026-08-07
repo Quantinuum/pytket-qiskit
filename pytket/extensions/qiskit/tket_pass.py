@@ -59,9 +59,7 @@ class TketPass(TransformationPass):
         self._pass.apply(circ)
         qc = tk_to_qiskit(circ)
         new_param_lookup = {p._symbol_expr: p for p in qc.parameters}  # noqa: SLF001
-        subs_map = {
-            new_param_lookup[p._symbol_expr]: p for p in old_parameters
-        }  # noqa: SLF001
+        subs_map = {new_param_lookup[p._symbol_expr]: p for p in old_parameters}  # noqa: SLF001
         qc.assign_parameters(subs_map, inplace=True)
         newdag = circuit_to_dag(qc)
         newdag.name = dag.name

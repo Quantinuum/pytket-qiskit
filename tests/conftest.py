@@ -57,6 +57,7 @@ def brussels_backend() -> IBMQBackend:
 
 
 if have_aer():
+
     @pytest.fixture(scope="module")
     def brussels_emulator_backend() -> IBMQEmulatorBackend:
         return IBMQEmulatorBackend(

@@ -17,6 +17,7 @@ from ._metadata import __extension_name__, __extension_version__
 
 from functools import cache
 
+
 @cache
 def have_aer() -> bool:
     try:
