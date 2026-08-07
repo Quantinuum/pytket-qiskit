@@ -522,7 +522,7 @@ def test_nshots_batching(brussels_backend: IBMQBackend) -> None:
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_nshots(
-    brussels_emulator_backend: IBMQEmulatorBackend,
+    brussels_emulator_backend: "IBMQEmulatorBackend",
 ) -> None:
     for b in [AerBackend(), brussels_emulator_backend]:
         circuit = Circuit(1).X(0)
