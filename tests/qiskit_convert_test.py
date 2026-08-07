@@ -45,10 +45,12 @@ from qiskit.transpiler import (  # type: ignore
 from qiskit.transpiler.preset_passmanagers.level2 import (  # type: ignore
     level_2_pass_manager,
 )
+
 from pytket.extensions.qiskit import have_aer
 
 if have_aer():
     from qiskit_aer import Aer  # type: ignore
+
     from pytket.extensions.qiskit.backends import (
         AerBackend,
         qiskit_aer_backend,

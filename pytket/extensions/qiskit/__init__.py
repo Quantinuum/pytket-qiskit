@@ -13,22 +13,23 @@
 # limitations under the License.
 
 # _metadata.py is copied to the folder after installation.
-from ._metadata import __extension_name__, __extension_version__
-
 from functools import cache
+
+from ._metadata import __extension_name__, __extension_version__
+from .backends import IBMQBackend, NoIBMQCredentialsError
+from .backends.config import set_ibmq_config
+from .qiskit_convert import process_characterisation, qiskit_to_tk, tk_to_qiskit
 
 
 @cache
 def have_aer() -> bool:
     try:
-        import qiskit_aer  # type: ignore # noqa # pylint: disable=unused-import
+        import qiskit_aer  # type: ignore # pylint: disable=unused-import
 
         return True
     except ImportError:
         return False
 
-
-from .backends import IBMQBackend, NoIBMQCredentialsError
 
 if have_aer():
     from .backends import (
@@ -38,8 +39,5 @@ if have_aer():
         AerUnitaryBackend,
         IBMQEmulatorBackend,
     )
-
-from .backends.config import set_ibmq_config
-from .qiskit_convert import process_characterisation, qiskit_to_tk, tk_to_qiskit
 
 # from .tket_pass import TketPass

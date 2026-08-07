@@ -17,7 +17,7 @@ import os
 import pytest
 from qiskit_ibm_runtime import QiskitRuntimeService  # type: ignore
 
-from pytket.extensions.qiskit import have_aer, IBMQBackend
+from pytket.extensions.qiskit import IBMQBackend, have_aer
 
 if have_aer():
     from pytket.extensions.qiskit import IBMQEmulatorBackend

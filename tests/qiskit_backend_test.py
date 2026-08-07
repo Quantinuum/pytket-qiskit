@@ -24,6 +24,7 @@ from pytket.extensions.qiskit import have_aer
 
 if have_aer():
     from qiskit_aer import Aer  # type: ignore
+
     from pytket.extensions.qiskit import (
         AerBackend,
         AerStateBackend,
