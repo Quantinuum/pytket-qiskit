@@ -69,11 +69,11 @@ if have_aer():
         AerUnitaryBackend,
         IBMQEmulatorBackend,
     )
-from pytket.extensions.qiskit.backends.crosstalk_model import (
-    CrosstalkParams,
-    _FractionalUnitary,
-    _NoisyCircuitBuilder,
-)
+    from pytket.extensions.qiskit.backends.crosstalk_model import (
+        CrosstalkParams,
+        _FractionalUnitary,
+        _NoisyCircuitBuilder,
+    )
 from pytket.extensions.qiskit.backends.ibm import _DEBUG_HANDLE_PREFIX
 from pytket.extensions.qiskit.backends.ibm_utils import _gen_lightsabre_transformation
 from pytket.mapping import LexiLabellingMethod, LexiRouteRoutingMethod, MappingManager
