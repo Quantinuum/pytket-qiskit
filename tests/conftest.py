@@ -56,13 +56,14 @@ def brussels_backend() -> IBMQBackend:
     )
 
 
-@pytest.fixture(scope="module")
-def brussels_emulator_backend() -> IBMQEmulatorBackend:
-    return IBMQEmulatorBackend(
-        "ibm_aachen",
-        instance=os.getenv("PYTKET_REMOTE_IBM_CLOUD_INSTANCE"),
-        token=os.getenv("PYTKET_REMOTE_IBM_CLOUD_TOKEN"),
-    )
+if have_aer():
+    @pytest.fixture(scope="module")
+    def brussels_emulator_backend() -> IBMQEmulatorBackend:
+        return IBMQEmulatorBackend(
+            "ibm_aachen",
+            instance=os.getenv("PYTKET_REMOTE_IBM_CLOUD_INSTANCE"),
+            token=os.getenv("PYTKET_REMOTE_IBM_CLOUD_TOKEN"),
+        )
 
 
 @pytest.fixture(scope="module")
