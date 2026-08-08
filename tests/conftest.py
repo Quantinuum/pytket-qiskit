@@ -17,10 +17,7 @@ import os
 import pytest
 from qiskit_ibm_runtime import QiskitRuntimeService  # type: ignore
 
-from pytket.extensions.qiskit import have_aer, IBMQBackend
-
-if have_aer():
-    from pytket.extensions.qiskit import IBMQEmulatorBackend
+from pytket.extensions.qiskit import IBMQBackend
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -56,13 +53,20 @@ def brussels_backend() -> IBMQBackend:
     )
 
 
-@pytest.fixture(scope="module")
-def brussels_emulator_backend() -> IBMQEmulatorBackend:
-    return IBMQEmulatorBackend(
-        "ibm_aachen",
-        instance=os.getenv("PYTKET_REMOTE_IBM_CLOUD_INSTANCE"),
-        token=os.getenv("PYTKET_REMOTE_IBM_CLOUD_TOKEN"),
-    )
+try:
+    import qiskit_aer  # type: ignore # noqa: F401
+
+    from pytket.extensions.qiskit import IBMQEmulatorBackend
+
+    @pytest.fixture(scope="module")
+    def brussels_emulator_backend() -> IBMQEmulatorBackend:
+        return IBMQEmulatorBackend(
+            "ibm_aachen",
+            instance=os.getenv("PYTKET_REMOTE_IBM_CLOUD_INSTANCE"),
+            token=os.getenv("PYTKET_REMOTE_IBM_CLOUD_TOKEN"),
+        )
+except ImportError:
+    pass
 
 
 @pytest.fixture(scope="module")

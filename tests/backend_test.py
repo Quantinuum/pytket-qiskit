@@ -69,11 +69,11 @@ if have_aer():
         AerUnitaryBackend,
         IBMQEmulatorBackend,
     )
-from pytket.extensions.qiskit.backends.crosstalk_model import (
-    CrosstalkParams,
-    _FractionalUnitary,
-    _NoisyCircuitBuilder,
-)
+    from pytket.extensions.qiskit.backends.crosstalk_model import (
+        CrosstalkParams,
+        _FractionalUnitary,
+        _NoisyCircuitBuilder,
+    )
 from pytket.extensions.qiskit.backends.ibm import _DEBUG_HANDLE_PREFIX
 from pytket.extensions.qiskit.backends.ibm_utils import _gen_lightsabre_transformation
 from pytket.mapping import LexiLabellingMethod, LexiRouteRoutingMethod, MappingManager
@@ -522,7 +522,7 @@ def test_nshots_batching(brussels_backend: IBMQBackend) -> None:
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_nshots(
-    brussels_emulator_backend: IBMQEmulatorBackend,
+    brussels_emulator_backend: "IBMQEmulatorBackend",
 ) -> None:
     for b in [AerBackend(), brussels_emulator_backend]:
         circuit = Circuit(1).X(0)
@@ -907,7 +907,7 @@ def test_operator_expectation_value() -> None:
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_ibmq_emulator(
-    brussels_emulator_backend: IBMQEmulatorBackend,
+    brussels_emulator_backend: "IBMQEmulatorBackend",
 ) -> None:
     assert brussels_emulator_backend._noise_model is not None  # noqa: SLF001
     b_ibm = brussels_emulator_backend._ibmq  # noqa: SLF001
@@ -938,9 +938,7 @@ def test_ibmq_emulator(
     brussels_emulator_backend.rebase_pass().apply(copy_circ)
     assert brussels_emulator_backend.required_predicates[1].verify(copy_circ)
     circ = brussels_emulator_backend.get_compiled_circuit(circ)
-    b_noi = AerBackend(
-        noise_model=brussels_emulator_backend._noise_model
-    )  # noqa: SLF001
+    b_noi = AerBackend(noise_model=brussels_emulator_backend._noise_model)  # noqa: SLF001
     emu_counts = brussels_emulator_backend.run_circuit(
         circ, n_shots=10, seed=10
     ).get_counts()
@@ -1109,7 +1107,7 @@ def _tk1_to_rotations(a: float, b: float, c: float) -> Circuit:
 
 
 def _verify_single_q_rebase(
-    backend: AerUnitaryBackend, a: float, b: float, c: float
+    backend: "AerUnitaryBackend", a: float, b: float, c: float
 ) -> bool:
     """Compare the unitary of a tk1 gate to the unitary of the translated circuit"""
     rotation_circ = _tk1_to_rotations(a, b, c)
@@ -1154,7 +1152,7 @@ def test_postprocess() -> None:
 @pytest.mark.flaky(reruns=3, reruns_delay=10)
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
-def test_postprocess_emu(brussels_emulator_backend: IBMQEmulatorBackend) -> None:
+def test_postprocess_emu(brussels_emulator_backend: "IBMQEmulatorBackend") -> None:
     assert brussels_emulator_backend.supports_contextual_optimisation
     c = Circuit(2, 2)
     c.X(0).X(1).measure_all()
@@ -1184,7 +1182,7 @@ def test_available_devices(qiskit_runtime_service: QiskitRuntimeService) -> None
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_backendinfo_serialization1(
-    brussels_emulator_backend: IBMQEmulatorBackend,
+    brussels_emulator_backend: "IBMQEmulatorBackend",
 ) -> None:
     # https://github.com/Quantinuum/tket/issues/192
     backend_info_json = brussels_emulator_backend.backend_info.to_dict()
@@ -1242,7 +1240,7 @@ def test_sim_qubit_order() -> None:
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_required_predicates(
-    brussels_emulator_backend: IBMQEmulatorBackend,
+    brussels_emulator_backend: "IBMQEmulatorBackend",
 ) -> None:
     # https://github.com/Quantinuum/pytket-qiskit/issues/93
     circ = Circuit(8)  # 8 qubit circuit in IBMQ gateset
@@ -1483,7 +1481,7 @@ def test_barriers_in_aer_simulators() -> None:
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_ibmq_local_emulator(
-    brussels_emulator_backend: IBMQEmulatorBackend,
+    brussels_emulator_backend: "IBMQEmulatorBackend",
 ) -> None:
     b = brussels_emulator_backend
     circ = Circuit(2).H(0).CX(0, 1).measure_all()

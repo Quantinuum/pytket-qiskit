@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pytket.extensions.qiskit import have_aer
+from .ibm import IBMQBackend, NoIBMQCredentialsError
 
-if have_aer():
+try:
+    import qiskit_aer  # type: ignore # pylint: disable=unused-import
+
     from .aer import (
         AerBackend,
         AerDensityMatrixBackend,
@@ -22,7 +24,6 @@ if have_aer():
         AerUnitaryBackend,
         qiskit_aer_backend,
     )
-from .ibm import IBMQBackend, NoIBMQCredentialsError
-
-if have_aer():
     from .ibmq_emulator import IBMQEmulatorBackend
+except ImportError:
+    pass

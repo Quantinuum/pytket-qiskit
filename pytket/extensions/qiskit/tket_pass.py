@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pytket.extensions.qiskit import have_aer, IBMQBackend
+from pytket.extensions.qiskit import IBMQBackend, have_aer
 
 if have_aer():
     from qiskit_aer.backends import AerSimulator  # type: ignore
+
     from pytket.extensions.qiskit import (
         AerBackend,
         AerStateBackend,
@@ -59,9 +60,7 @@ class TketPass(TransformationPass):
         self._pass.apply(circ)
         qc = tk_to_qiskit(circ)
         new_param_lookup = {p._symbol_expr: p for p in qc.parameters}  # noqa: SLF001
-        subs_map = {
-            new_param_lookup[p._symbol_expr]: p for p in old_parameters
-        }  # noqa: SLF001
+        subs_map = {new_param_lookup[p._symbol_expr]: p for p in old_parameters}  # noqa: SLF001
         qc.assign_parameters(subs_map, inplace=True)
         newdag = circuit_to_dag(qc)
         newdag.name = dag.name
@@ -72,7 +71,7 @@ class TketAutoPass(TketPass):
     """The tket compiler to be plugged in to the Qiskit compilation sequence"""
 
     if have_aer():
-        _aer_backend_map = {  # noqa: RUF012
+        _aer_backend_map = {
             "aer_simulator": AerBackend,
             "aer_simulator_statevector": AerStateBackend,
             "aer_simulator_unitary": AerUnitaryBackend,

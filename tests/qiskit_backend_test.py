@@ -24,6 +24,7 @@ from pytket.extensions.qiskit import have_aer
 
 if have_aer():
     from qiskit_aer import Aer  # type: ignore
+
     from pytket.extensions.qiskit import (
         AerBackend,
         AerStateBackend,
@@ -119,7 +120,7 @@ def test_cancel() -> None:
 
 @pytest.mark.skipif(skip_remote_tests, reason=REASON)
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
-def test_qiskit_counts(brussels_emulator_backend: IBMQEmulatorBackend) -> None:
+def test_qiskit_counts(brussels_emulator_backend: "IBMQEmulatorBackend") -> None:
     num_qubits = 2
     qc = QuantumCircuit(num_qubits)
     qc.h(0)
