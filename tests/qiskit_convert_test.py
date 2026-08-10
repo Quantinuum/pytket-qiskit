@@ -210,7 +210,7 @@ def test_measures() -> None:
     qc = transpile(qc, backend)
     job = backend.run([qc], seed_simulator=7)
     counts0 = job.result().get_counts(qc)
-    qc.decompose()
+    qc.decompose().decompose()
     tkc = qiskit_to_tk(qc)
     qc = tk_to_qiskit(tkc)
     qc = transpile(qc, backend)
