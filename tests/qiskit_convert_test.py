@@ -242,6 +242,37 @@ def test_boxes() -> None:
     assert d == d1
 
 
+def test_circbox_with_sparse_unit_indices() -> None:
+    inner = Circuit()
+    inner.add_qubit(Qubit(2))
+    inner.add_bit(Bit(3))
+    inner.Measure(Qubit(2), Bit(3))
+
+    outer = Circuit(1, 1)
+    outer.add_circbox(CircBox(inner), [Qubit(0), Bit(0)])
+
+    converted = tk_to_qiskit(outer)
+    instruction = converted.data[0].operation
+    assert instruction.num_qubits == 1
+    assert instruction.num_clbits == 1
+    assert inner.qubits == [Qubit(2)]
+    assert inner.bits == [Bit(3)]
+
+
+def test_conditional_round_trip_with_sparse_inner_qubits() -> None:
+    qreg = QuantumRegister(2, "q")
+    creg = ClassicalRegister(1, "c")
+    original = QuantumCircuit(qreg, creg)
+    with original.if_test((creg[0], 1)):
+        original.x(qreg[1])
+
+    converted = tk_to_qiskit(qiskit_to_tk(original))
+    if_else = converted.data[0].operation
+    assert isinstance(if_else, IfElseOp)
+    assert if_else.num_qubits == 1
+    assert if_else.blocks[0].num_qubits == 1
+
+
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_Unitary1qBox() -> None:
     c = Circuit(1)
