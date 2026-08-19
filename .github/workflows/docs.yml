@@ -17,4 +17,4 @@ jobs:
     name: Build docs and create artefact
     uses: Quantinuum/pytket-workflows/.github/workflows/docs-wf.yml@v2
     with:
-      extname: "pytket-qiskit"
+      extname: "pytket-qiskit[aer]"
