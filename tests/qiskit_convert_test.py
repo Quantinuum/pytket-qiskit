@@ -283,6 +283,7 @@ def test_conditional_round_trip_with_sparse_inner_qubits() -> None:
     assert if_else.num_qubits == 1
     assert if_else.blocks[0].num_qubits == 1
 
+
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_Unitary1qBox() -> None:
     c = Circuit(1)
