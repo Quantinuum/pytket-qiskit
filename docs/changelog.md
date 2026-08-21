@@ -7,6 +7,7 @@
 ## Unreleased
 
 - Make `qiskit_aer` an optional dependency.
+- Add support for Python 3.14 and drop 3.10.
 - Fix conversion of boxed circuits with sparse internal unit indices.
 
 ## 0.77.0 (January 2026)

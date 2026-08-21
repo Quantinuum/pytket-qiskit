@@ -12,7 +12,7 @@ representations, simulation and access to the IBM quantum devices and simulators
 run on IBM backends and simulators, as well as conversion to and from Qiskit
 representations.
 
-`pytket-qiskit` is available for Python 3.10, 3.11, 3.12 and 3.13, on Linux,
+`pytket-qiskit` is available for Python 3.11, 3.12, 3.13 and 3.14, on Linux,
 MacOS and Windows. To install, run:
 
 ```
@@ -21,6 +21,16 @@ pip install pytket-qiskit
 
 This will install `pytket` if it isn't already installed, and add new classes
 and methods into the `pytket.extensions` namespace.
+
+To use Aer simulators and IBMQ emulators with pytket-qiskit, install with the
+`aer` option:
+
+```
+pip install pytket-qiskit[aer]
+```
+
+However, note that `qiskit_aer` is no longer actively maintained and will not
+be compatible with the most recent Python versions.
 
 ## Available IBM Backends
 

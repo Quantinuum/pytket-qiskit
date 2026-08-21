@@ -1,7 +1,7 @@
 [project]
 name = "pytket-qiskit"
 dynamic = ["version"]
-requires-python = ">=3.10,<4.0"
+requires-python = ">=3.11,<4.0"
 
 description = "Extension for pytket, providing translation to and from the Qiskit."
 license = { file = "LICENSE" }
@@ -14,10 +14,10 @@ maintainers = [
 ]
 classifiers = [
     "Environment :: Console",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: POSIX :: Linux",
     "Operating System :: Microsoft :: Windows",
