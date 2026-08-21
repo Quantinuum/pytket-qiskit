@@ -7,6 +7,7 @@
 ## Unreleased
 
 - Make `qiskit_aer` an optional dependency.
+- Fix conversion of boxed circuits with sparse internal unit indices.
 
 ## 0.77.0 (January 2026)
 
