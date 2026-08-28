@@ -231,7 +231,9 @@ def test_boxes() -> None:
     d = Circuit(3, name="d")
     d.add_circbox(cbox, [0, 1])
     d.add_circbox(cbox, [1, 2])
-    u = np.asarray([[0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1], [1, 0, 0, 0]])
+    u = np.asarray(
+        [[0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1], [1, 0, 0, 0]], dtype=complex
+    )
     ubox = Unitary2qBox(u)
     d.add_unitary2qbox(ubox, 0, 1)
     qsc = tk_to_qiskit(d)
@@ -287,7 +289,7 @@ def test_conditional_round_trip_with_sparse_inner_qubits() -> None:
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_Unitary1qBox() -> None:
     c = Circuit(1)
-    u = np.asarray([[0, 1], [1, 0]])
+    u = np.asarray([[0, 1], [1, 0]], dtype=complex)
     ubox = Unitary1qBox(u)
     c.add_unitary1qbox(ubox, 0)
     # Convert to qiskit
@@ -304,7 +306,9 @@ def test_Unitary1qBox() -> None:
 @pytest.mark.skipif(not have_aer(), reason="qiskit_aer not installed")
 def test_Unitary2qBox() -> None:
     c = Circuit(2)
-    u = np.asarray([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    u = np.asarray(
+        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=complex
+    )
     ubox = Unitary2qBox(u)
     c.add_unitary2qbox(ubox, 0, 1)
     # Convert to qiskit
@@ -331,7 +335,8 @@ def test_Unitary3qBox() -> None:
             [0, 0, 0, 0, 0, 0, 0, 1],
             [0, 0, 0, 0, 0, 0, 1, 0],
             [0, 0, 0, 1, 0, 0, 0, 0],
-        ]
+        ],
+        dtype=complex,
     )
     ubox = Unitary3qBox(u)
     c.add_unitary3qbox(ubox, 0, 1, 2)
@@ -426,7 +431,9 @@ def test_conditions() -> None:
     box_c.Measure(0, 0, condition_bits=[0, 1], condition_value=0)
     box = CircBox(box_c)
 
-    u = np.asarray([[0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1], [1, 0, 0, 0]])
+    u = np.asarray(
+        [[0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1], [1, 0, 0, 0]], dtype=complex
+    )
     ubox = Unitary2qBox(u)
 
     c = Circuit(2, 2, name="c")
