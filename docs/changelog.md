@@ -4,7 +4,7 @@
 
 # Changelog
 
-## Unreleased
+## 0.78.0 (August 2026)
 
 - Make `qiskit_aer` an optional dependency.
 - Add support for Python 3.14 and drop 3.10.
