@@ -111,7 +111,7 @@ class CrosstalkParams:
     phase_damping_error: dict[Qubit, float]
     amplitude_damping_error: dict[Qubit, float]
 
-    def get_noise_model(self) -> NoiseModel:
+    def get_noise_model(self) -> "NoiseModel":
         """Construct a :py:class:`~qiskit_aer.noise.NoiseModel` from phase_damping_error
         and amplitude_damping_error"""
         noise_model = NoiseModel()

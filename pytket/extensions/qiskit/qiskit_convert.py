@@ -863,6 +863,9 @@ def append_tk_command_to_qiskit(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915
 
     if optype in (OpType.CircBox, OpType.ExpBox, OpType.PauliExpBox, OpType.CustomGate):
         subcircuit = op.get_circuit()  # type: ignore
+        # Box ports are positional, so sparse internal unit indices must not create
+        # extra wires when the circuit is converted to a Qiskit instruction.
+        subcircuit.flatten_registers()
         subqc = tk_to_qiskit(subcircuit)
         qargs = []
         cargs = []
@@ -886,7 +889,11 @@ def append_tk_command_to_qiskit(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915
         else:
             instruc = subqc.to_instruction()
             _apply_qiskit_instruction(
-                qcirc=qcirc, instruc=instruc, qargs=qargs, condition=condition
+                qcirc=qcirc,
+                instruc=instruc,
+                qargs=qargs,
+                cargs=cargs,
+                condition=condition,
             )
         return qcirc
 

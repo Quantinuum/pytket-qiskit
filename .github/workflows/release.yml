@@ -12,9 +12,9 @@ on:
 jobs:
   build-and-publish:
     name: Build, test, and store artifact, and upload to pypi
-    uses: Quantinuum/pytket-workflows/.github/workflows/release-wf.yml@v2
+    uses: Quantinuum/pytket-workflows/.github/workflows/release-wf.yml@v2.0.3
     with:
-      pyver: "3.10"
+      pyver: "3.11"
       publish: ${{ github.event_name == 'release' }}
     secrets:
       PYPI_API_TOKEN: ${{ secrets.PYPI_PYTKET_QISKIT_API_TOKEN }}
