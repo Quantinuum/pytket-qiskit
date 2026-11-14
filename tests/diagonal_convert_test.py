@@ -2,8 +2,8 @@
 
 import numpy as np
 import pytest
-from qiskit import QuantumCircuit, QuantumRegister
-from qiskit.circuit.library import DiagonalGate
+from qiskit import QuantumCircuit, QuantumRegister  # type: ignore[import-untyped]
+from qiskit.circuit.library import DiagonalGate  # type: ignore[import-untyped]
 from qiskit.quantum_info import Operator  # type: ignore[import-untyped]
 
 from pytket.circuit import Circuit, DiagonalBox, OpType
