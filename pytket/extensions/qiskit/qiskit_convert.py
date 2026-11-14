@@ -244,10 +244,12 @@ def _qpo_from_peg(peg: PauliEvolutionGate, qubits: list[Qubit]) -> QubitPauliOpe
     for p, c in zip(op.paulis, op.coeffs, strict=False):
         if np.iscomplex(c):
             raise ValueError(f"Coefficient for Pauli {p} is non-real.")
-        coeff = _param_to_tk(t) * c
+        # PauliExpBox angles are half-turns: exp(-i * pi * angle * P / 2).
+        coeff = 2 * _param_to_tk(t) * c
         qpslist = []
         pstr = p.to_label()
-        for a in pstr:
+        # Qiskit labels list the highest-index qubit first.
+        for a in reversed(pstr):
             if a == "X":
                 qpslist.append(Pauli.X)
             elif a == "Y":
@@ -535,8 +537,9 @@ class _CircuitBuilder:
                 )
 
             elif type(instr) is PauliEvolutionGate:
-                qpo = _qpo_from_peg(instr, qubits)
                 empty_circ = Circuit(len(qargs))
+                # A CircBox uses local positional wires, independently of its qargs.
+                qpo = _qpo_from_peg(instr, empty_circ.qubits)
                 circ = gen_term_sequence_circuit(qpo, empty_circ)
                 ccbox = CircBox(circ)
                 self.tkc.add_circbox(ccbox, qubits)
