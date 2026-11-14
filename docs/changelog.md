@@ -4,6 +4,10 @@
 
 # Changelog
 
+## Unreleased
+
+- Preserve native diagonal operations in both circuit converters, including qubit order and classical conditions.
+
 ## 0.79.0 (October 2026)
 
 - fix in qiskit transpilation

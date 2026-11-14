@@ -44,6 +44,7 @@ from pytket.circuit import (
     CircBox,
     Circuit,
     Conditional,
+    DiagonalBox,
     Node,
     Op,
     OpType,
@@ -86,6 +87,7 @@ from qiskit.circuit import Qubit as QCQubit
 from qiskit.circuit.classical.expr import Binary, Expr, Unary, Var  # type: ignore
 from qiskit.circuit.library import (
     CRYGate,
+    DiagonalGate,
     Initialize,
     PauliEvolutionGate,
     RYGate,
@@ -510,8 +512,13 @@ class _CircuitBuilder:
             bits: list[Bit] = [self.cbmap[bit] for bit in cargs]
 
             optype = None
-            if type(instr) not in (PauliEvolutionGate, UnitaryGate, IfElseOp):
-                # Handling of PauliEvolutionGate, UnitaryGate and IfElseOp below
+            if type(instr) not in (
+                PauliEvolutionGate,
+                UnitaryGate,
+                IfElseOp,
+                DiagonalGate,
+            ):
+                # These instructions have dedicated parameter handling below.
                 optype = _optype_from_qiskit_instruction(instruction=instr)
 
             if optype == OpType.QControlBox:
@@ -540,6 +547,10 @@ class _CircuitBuilder:
                 circ = gen_term_sequence_circuit(qpo, empty_circ)
                 ccbox = CircBox(circ)
                 self.tkc.add_circbox(ccbox, qubits)
+
+            elif type(instr) is DiagonalGate:
+                diagonal = np.asarray(instr.params, dtype=np.complex128)
+                self.tkc.add_diagonal_box(DiagonalBox(diagonal), list(reversed(qubits)))
 
             elif type(instr) is UnitaryGate:
                 unitary = cast("NDArray[np.complex128]", instr.params[0])
@@ -897,6 +908,17 @@ def append_tk_command_to_qiskit(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915
             )
         return qcirc
 
+    if optype == OpType.DiagonalBox:
+        assert isinstance(op, DiagonalBox)
+        qargs = [qregmap[q.reg_name][q.index[0]] for q in args]
+        _apply_qiskit_instruction(
+            qcirc,
+            DiagonalGate(op.get_diagonal()),
+            qargs=list(reversed(qargs)),
+            condition=condition,
+        )
+        return qcirc
+
     if optype in (OpType.Unitary1qBox, OpType.Unitary2qBox, OpType.Unitary3qBox):
         qargs = [qregmap[q.reg_name][q.index[0]] for q in args]
         u = op.get_matrix()  # type: ignore
@@ -1123,6 +1145,7 @@ _protected_tket_gates = (
         OpType.Unitary2qBox,
         OpType.Unitary3qBox,
         OpType.QControlBox,
+        OpType.DiagonalBox,
     }
     | {OpType.CustomGate}
 )
