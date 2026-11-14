@@ -4,6 +4,10 @@
 
 # Changelog
 
+## Unreleased
+
+- Preserve evolution time and Pauli qubit order when converting PauliEvolutionGate.
+
 ## 0.79.0 (October 2026)
 
 - fix in qiskit transpilation
